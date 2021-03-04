@@ -1,2 +1,9 @@
+.gitignore.swp
 *.agdai
 MAlonzo/**
+Categories/**
+deprecated/**
+GADTs/**
+agda-notes
+latex/**
+**.lagda.*

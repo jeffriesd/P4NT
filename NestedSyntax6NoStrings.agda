@@ -1,8 +1,10 @@
 module NestedSyntax6NoStrings where
 
 open import Relation.Binary.PropositionalEquality hiding ([_])
-open import Data.String using (String)
-open import Data.Nat using (ℕ; zero; suc)
+-- open import Data.String using (String)
+-- open import Data.Nat using (ℕ; zero; suc)
+open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
+
 open import Data.Empty using (⊥; ⊥-elim)
 open import Relation.Nullary using (Dec; yes; no; ¬_)
 -- open import Data.List hiding ([_])

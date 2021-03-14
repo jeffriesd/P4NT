@@ -17,10 +17,11 @@ open import Categories.Functor using (Functor ; _∘F_ ) renaming (id to idF)
 open import Categories.Category.Construction.Functors using (Functors)
 open import Categories.Category.Product using (Product ; Swap ; πˡ ; πʳ ; _⁂_ ; _※_) 
 open import Categories.NaturalTransformation renaming (_∘ᵥ_ to _∘v_ ; id to idnat)
-open import Data.Nat using (ℕ ; _≤_ )
-open ℕ
-open _≤_
+-- open import Data.Nat using (ℕ ; _≤_ )
+-- open ℕ
+-- open _≤_
 
+open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
 
 open import Data.Unit using (⊤)
 open import Data.Empty renaming (⊥ to ⊥')
@@ -33,8 +34,7 @@ open import Data.Product renaming (_×_ to _×'_)
 open import Data.Sum
 open import Data.Sum.Properties using (inj₂-injective)
 
-open import Utils using (foreach2 ; vhead ; vtail)
-
+open import Utils using (foreach2 ; vhead ; vtail ; ×'-cong)
 ------------------------------- stdlib uses Set _ here
 
 
@@ -70,6 +70,32 @@ Setsl o = record
 
 Sets : Category (lsuc lzero) lzero lzero
 Sets = Setsl lzero
+
+
+SetSum : Functor (Product Sets Sets) Sets
+SetSum = record
+  { F₀ = λ { (A , B)  → A ⊎ B }
+  ; F₁ = λ { {A , B} (f , g)  → λ { (inj₁ x) → inj₁ (f x)
+                                  ; (inj₂ y) → inj₂ (g y) } }
+  ; identity = λ { {A , B} {inj₁ x} → ≡.refl
+                 ; {A , B} {inj₂ y} → ≡.refl }
+  ; homomorphism = λ { {A , A'} {B , B'} {C , C'} {f , f'} {g , g'} {inj₁ x} → ≡.refl
+                     ; {A , A'} {B , B'} {C , C'} {f , f'} {g , g'} {inj₂ y} → ≡.refl  }
+  ; F-resp-≈ = λ { (f≈h , g≈i) {inj₁ x} → ≡.cong inj₁ f≈h
+                 ; (f≈h , g≈i) {inj₂ y} → ≡.cong inj₂ g≈i }
+  } 
+
+
+
+SetProd : Functor (Product Sets Sets) Sets
+SetProd = record
+  { F₀ = λ { (A , B)  → A ×' B }
+  ; F₁ = λ { (f , g) (x , y)  → f x , g y }
+  ; identity = ≡.refl
+  ; homomorphism = ≡.refl
+  ; F-resp-≈ = λ { (f≈h , g≈i) → ×'-cong f≈h g≈i } 
+  } 
+
 -------------------------------------------------------
 
 
@@ -195,6 +221,15 @@ Sets^tail n = record
   ; homomorphism = λ { {X ∷ Xs} {Y ∷ Ys} {Z ∷ Zs} {fcons f fs} {fcons g gs} → Functor.homomorphism (idF {C = Sets^ n}) }
   ; F-resp-≈ = λ { {X ∷ Xs} {Y ∷ Ys} {fcons f fs} {fcons g gs} (f≈g , fs≈gs) → fs≈gs }
  } 
+
+Sets^cons : ∀ (n : ℕ) → Functor (Product Sets (Sets^ n)) (Sets^ (suc n))
+Sets^cons n = record
+  { F₀ = λ { (X , Xs) → X ∷ Xs }
+  ; F₁ = λ { (f , fs) → fcons f fs }
+  ; identity = λ { {A , As} → ≡.refl , Functor.identity (idF {C = Sets^ n}) }
+  ; homomorphism = (λ { {A , As} {B , Bs} {C , Cs} {f , fs} {g , gs} → ≡.refl , (Functor.homomorphism (idF {C = Sets^ n})) }) 
+  ; F-resp-≈ = λ { {A , As} {B , Bs} {f , fs} {g , gs} (f≈g , fs≈gs) → f≈g , fs≈gs  }
+  } 
 
 Sets^decompose : ∀ (n : ℕ) → Functor (Sets^ (suc n)) (Product Sets (Sets^ n))
 Sets^decompose n = Sets^head n ※ Sets^tail n 

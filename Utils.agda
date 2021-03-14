@@ -1,11 +1,11 @@
 
-open import Data.Nat
 open import Data.Vec
 open import Level renaming (suc to lsuc ; zero to lzero)
 open import Data.Product renaming (_×_ to _×'_) 
-open import Data.Unit
+open import Agda.Builtin.Unit
+-- open import Agda.Builtin.Nat
 
-
+open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
 
 
 open import Data.Bool using (if_then_else_; true; false)
@@ -16,6 +16,8 @@ module Utils where
 
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
 
+subst : ∀ {a b : Level} {A : Set a} {B : A → Set b} → {x y : A} → x ≡ y → B x → B y
+subst ≡.refl bx = bx
 
 vhead : ∀ {l} {A : Set l} {n : ℕ}  → Vec A (suc n) → A 
 vhead (x ∷ xs) = x
@@ -38,6 +40,34 @@ eq-elim-map1 ≡.refl f x = f x
 
 eq-elim-map2 : ∀ {l} {A B C : Set l} → A ≡ B → (A → C) → B → C
 eq-elim-map2 ≡.refl f x = f x
+
+-- for non dependent functions 
+cong-both : ∀ {a b : Level} {A : Set a} {B : Set b}  {f g : A → B}
+           → f ≡ g → {x y : A} → x ≡ y →  f x ≡ g y
+cong-both ≡.refl ≡.refl = ≡.refl
+
+
+-- cong-ext  : ∀ {a b : Level} {A : Set a} {B : Set b}  {f g : A → B}
+--            → (∀ {x} → f x ≡ g x) →  f x ≡ g y
+
+-- congie : ∀ {a b c : Level} {A : Set a} {B : A → Set b} {C : Set c}  {f g : ∀ {x : A} → B x → C}
+--            → f ≡ g → {x y : A} → x ≡ y →  f x ≡ g y
+  
+
+
+cong-app-impl : ∀ {a b : Level} {A : Set a} {B : A → Set b} {f g : {x : A} → B x} →
+           (λ {x} → f {x}) ≡ (λ {x} → g {x}) → {x : A} → f {x} ≡ g {x}
+cong-app-impl ≡.refl {x} = ≡.refl
+
+
+
+-- cong-bothd : ∀ {a b : Level} {A : Set a} {B : A → Set b} {f g : (x : A) → B x} →
+--            f ≡ g → (x y : A) → x ≡ y → f x ≡ g y
+-- cong-bothd p x y q = ? 
+
+
+
+
 
 
 data emptyset (l : Level) : Set l where
@@ -72,7 +102,7 @@ foreach2 P (A ∷ As) (B ∷ Bs) = P A B ×' foreach2 P As Bs
 foreach-toVec : ∀ {n : ℕ} {A : Set} {P : A → Set} {xs : Vec A n}
                 → foreach P xs
                 → Vec (Σ A P) n
-foreach-toVec {xs = Vec.[]} Data.Unit.tt = Vec.[]
+foreach-toVec {xs = Vec.[]} tt = Vec.[]
 foreach-toVec {xs = x ∷ xs} (fst , snd) = (x , fst) ∷ foreach-toVec {xs = xs} snd
 
 foreach-preserves : ∀ {n : ℕ} {A : Set} {P Q : A → Set}
@@ -80,7 +110,7 @@ foreach-preserves : ∀ {n : ℕ} {A : Set} {P Q : A → Set}
                   → (As : Vec A n)
                   → foreach P As
                   → foreach Q As
-foreach-preserves P⇒Q [] Data.Unit.tt = Data.Unit.tt
+foreach-preserves P⇒Q [] tt = tt
 foreach-preserves P⇒Q (x ∷ xs) (P , Ps) = (P⇒Q x P) , (foreach-preserves P⇒Q xs Ps)
 
 

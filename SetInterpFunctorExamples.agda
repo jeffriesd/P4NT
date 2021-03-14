@@ -27,6 +27,8 @@ module SetInterpFunctorExamples where
 
 
 
+
+
 -- test set semantics of some simple types 
 
 β : FVar 0

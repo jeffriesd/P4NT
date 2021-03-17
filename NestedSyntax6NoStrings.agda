@@ -734,6 +734,7 @@ mutual
   demoteVec [] φ ψ = []
   demoteVec (G ∷ Gs) φ ψ = (G [ φ :== ψ ]) ∷ demoteVec Gs φ ψ
 
+  -- demotion of functorial variables to non-functorial variables 
   _[_:==_] : ∀ {k : ℕ} → TypeExpr → FVar k → TCVar k → TypeExpr
   𝟘 [ φ :== ψ ] = 𝟘
   𝟙 [ φ :== ψ ] = 𝟙
@@ -779,26 +780,3 @@ mutual
 -------------------------------------------------------
 -- examples
 -------------------------------------------------------
-
-data List (A : Set) : Set where
-  nil : List A
-  cons : A → List A → List A
-
-x1 : ℕ
-x1 = 1
-
-x2 : ℕ
-x2 = 2
-
-x3 : ℕ
-x3 = 3
-
-xs : List ℕ
-xs = cons x1 (cons x2 (cons x3 nil)) 
-
-
-f : ℕ → ℕ
-f x = x
-
-xs2 : List ℕ
-xs2 = cons (f x1) (cons (f x2) (cons (f x3) nil)) 

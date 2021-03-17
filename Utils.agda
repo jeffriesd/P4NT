@@ -46,6 +46,12 @@ cong-both : ∀ {a b : Level} {A : Set a} {B : Set b}  {f g : A → B}
            → f ≡ g → {x y : A} → x ≡ y →  f x ≡ g y
 cong-both ≡.refl ≡.refl = ≡.refl
 
+-- cong : ∀ (f : A → B) {x y} → x ≡ y → f x ≡ f y
+-- cong f refl = refl
+cong-flip : ∀ {a b c : Level} {A : Set a} {B : Set b} {C : Set c} (f : A → B → C)
+           → {x y : A} → x ≡ y → {z : B} →  f x z  ≡ f y z 
+cong-flip f ≡.refl = ≡.refl
+
 
 -- cong-ext  : ∀ {a b : Level} {A : Set a} {B : Set b}  {f g : A → B}
 --            → (∀ {x} → f x ≡ g x) →  f x ≡ g y

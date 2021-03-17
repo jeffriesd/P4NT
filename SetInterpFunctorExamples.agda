@@ -1,5 +1,5 @@
 open import NestedSemanticsFunctorCleanup using (SetSem)
-open import EnvironmentsInnerRecCleanup
+open import EnvironmentsInnerRecCleanupExt
 open import HFixFunctorLib
 
 open import Relation.Nullary using (Dec; yes; no; ¬_; _because_; ofʸ; ofⁿ)
@@ -7,12 +7,13 @@ open import Data.Unit hiding (_≟_)
 open import Data.Nat using (ℕ ; zero ; suc)
 open import Data.Sum
 open import NestedSyntax6NoStrings
-open import Data.Vec
+open import Data.Vec using ([] ; _∷_ )
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
+open import Data.Product renaming (_×_ to _×'_)
 
 open ≡.≡-Reasoning
 
-open import Function using (_∘_)
+open import Function renaming (_∘_ to _∘'_)
 
 open import Data.Bool using (if_then_else_; true; false)
 open import Utils
@@ -23,6 +24,7 @@ open import Categories.Functor using (Functor ; _∘F_)
 
 module SetInterpFunctorExamples where 
 
+-- this typechecks as of 3/14/21 
 
 
 
@@ -75,6 +77,7 @@ fromNat∘toNat (hffin (inj₁ _)) = ≡.refl
 fromNat∘toNat (hffin (inj₂ y)) = ≡.cong (hffin ∘' inj₂) (fromNat∘toNat y)
 
 
+-- interpretation of list as nested type is isomorphic to Agda List
 φ : FVar 1 
 φ = 1 FVar.^F 1
 

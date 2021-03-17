@@ -11,6 +11,8 @@ open import Agda.Builtin.Nat renaming (Nat to ℕ)
 open import Categories.Category using (Category)
 open import Categories.Functor using (Functor)
 open import Categories.NaturalTransformation renaming (_∘ᵥ_ to _∘v_ ; id to idnat)
+open import Categories.NaturalTransformation.NaturalIsomorphism
+open import Categories.Morphism using (Iso)
 open import Data.Vec using (Vec ; _∷_; replicate) renaming (map to vmap)
 open import Level renaming (zero to  lzero ; suc to lsuc)
 open import Function using (flip) renaming (id to idf; _∘_ to _∘'_)
@@ -122,6 +124,7 @@ mkHFunc {k} H0 H1 Hid Hhomo Hresp = record
   -- } 
 
 
+
 {-# NO_POSITIVITY_CHECK #-}
 data HFixFunctor {k} (H : Functor ([Sets^ k ,Sets]) ([Sets^ k ,Sets])): Vec Set k → Set 
 
@@ -175,6 +178,7 @@ HFix-id {k} H {As} {hffin x} = ≡.cong hffin (Functor.identity  (Functor.F₀ H
 HFix-homo {k} H {As} {Bs} {Cs} {f} {g} {hffin x} = ≡.cong hffin (Functor.homomorphism (Functor.F₀ H (fixHFunc H)))
 
 HFix-resp {k} H {As} {Bs} {f} {g} f≡g {hffin x} = ≡.cong hffin (Functor.F-resp-≈ (Functor.F₀ H (fixHFunc H)) f≡g)
+
 
 
 -- higher-order map for fixHFunc
@@ -261,6 +265,9 @@ HFix-hmap {k} H1 H2 η = record { η = hη ; commute = commutes ; sym-commute = 
 
 
 -- TODO.. try showing HFixFullFunctor H is colimit of H 
+
+
+-- END MUTUAL 
 
 
 {-# TERMINATING #-}
@@ -391,24 +398,6 @@ HFix-hmap-homomorphism {k} H1 H2 H3 f g {Xs} {hffin x} =
             NaturalTransformation.η H2-μg Xs (f-μH2-Xs (NaturalTransformation.η H1-μf Xs x))
           ∎)
 
-abstract 
-
-  hfix-hmap : ∀ {k} (H1 H2 : Functor ([Sets^ k ,Sets]) ([Sets^ k ,Sets]))
-            → NaturalTransformation H1 H2
-            → NaturalTransformation (fixHFunc H1) (fixHFunc H2)
-  hfix-hmap H1 H2 η = HFix-hmap H1 H2 η 
-
-  hfix-homo : ∀ {k} (H1 H2 H3 : Functor ([Sets^ k ,Sets]) ([Sets^ k ,Sets]))
-                    → (f : NaturalTransformation H1 H2) → (g : NaturalTransformation H2 H3)
-                    → [Sets^ k ,Sets]  Categories.Category.[ 
-                      hfix-hmap H1 H3 (g ∘v f)  
-                      ≈ hfix-hmap H2 H3 g ∘v hfix-hmap H1 H2 f
-                    ]
-  hfix-homo  {k} H1 H2 H3 f g = HFix-hmap-homomorphism H1 H2 H3 f g
-
-
-
-
 {-# TERMINATING #-}
 HFix-hmap-F-resp : ∀ {k} (H1 H2 : Functor ([Sets^ k ,Sets]) ([Sets^ k ,Sets]))
                     → (f g : NaturalTransformation H1 H2) 
@@ -447,4 +436,31 @@ fixH = record
   ; homomorphism = λ {H1} {H2} {H3} {f} {g} → HFix-hmap-homomorphism H1 H2 H3 f g
   ; F-resp-≈ = λ {H1} {H2} {f} {g} f≈g → HFix-hmap-F-resp H1 H2 f g f≈g
   } 
+
+
+
+
+
+hin : ∀ {k} → (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) → NaturalTransformation (Functor.F₀ H (fixHFunc H)) (fixHFunc H)
+hin H = record { η = λ { Xs x → hffin x  }
+                ; commute = λ f → ≡.refl
+                ; sym-commute = λ f → ≡.refl } 
+
+hinv : ∀ {k} → (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) → NaturalTransformation (fixHFunc H) (Functor.F₀ H (fixHFunc H)) 
+hinv H = 
+  record { η = λ { X (hffin x) → x } 
+         ; commute = λ { {Xs} {Ys} fs {hffin x} → ≡.refl  }
+         ; sym-commute = λ { {Xs} {Ys} fs {hffin x}  → ≡.refl }  }
+
+fix-iso : ∀ {k} (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets])
+            (Xs : Vec Set k) 
+            → Categories.Morphism.Iso Sets (NaturalTransformation.η (hinv H) Xs) (NaturalTransformation.η (hin H) Xs)
+fix-iso H Xs = record { isoˡ = λ { {hffin x} → ≡.refl } 
+                      ; isoʳ = ≡.refl } 
+
+
+-- hin, hinv form natural isomorphism 
+hhin : ∀ {k} → (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) → NaturalIsomorphism (fixHFunc H) (Functor.F₀ H (fixHFunc H))
+hhin H = record { F⇒G = hinv H ; F⇐G = hin H ; iso = fix-iso H }
+
 

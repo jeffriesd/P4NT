@@ -19,7 +19,7 @@ open import Function using (flip) renaming (id to idf; _∘_ to _∘'_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
 open ≡.≡-Reasoning
 
-open import SetCatslzero
+open import SetCats
 
 open import Utils
 
@@ -463,4 +463,84 @@ fix-iso H Xs = record { isoˡ = λ { {hffin x} → ≡.refl }
 hhin : ∀ {k} → (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) → NaturalIsomorphism (fixHFunc H) (Functor.F₀ H (fixHFunc H))
 hhin H = record { F⇒G = hinv H ; F⇐G = hin H ; iso = fix-iso H }
 
+
+
+mutual 
+  {-# TERMINATING #-}
+  foldH-η : ∀ {k} (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets])
+              (F : Functor (Sets^ k) Sets)
+              (η : NaturalTransformation (Functor.F₀ H F) F)
+              (Xs : Vec Set k)
+              → Functor.F₀ (fixHFunc H) Xs 
+              → Functor.F₀ F Xs 
+  foldH-η H F η Xs (hffin x) = 
+    let Hη : NaturalTransformation (Functor.F₀ H (Functor.F₀ H F))
+                                  (Functor.F₀ H F)
+        Hη = Functor.F₁ H η 
+
+        Hfold : NaturalTransformation (Functor.F₀ H (fixHFunc H))
+                                      (Functor.F₀ H F)
+        Hfold = Functor.F₁ H (foldH H F η)
+
+      in NaturalTransformation.η (η ∘v Hfold) Xs x 
+
+  -- -- commutativity of foldH is given by 
+  -- 
+  -- HμH Xs ------> HF Xs ------> F Xs 
+  --   |              |            |
+  --   |              |            |    
+  --   v              v            v     
+  -- HμH Ys ------> HF Ys ------> F Ys
+  -- 
+  -- where the right square commutes by naturality of η 
+  -- and the left square commutes by naturality of H (foldH H F η)
+  foldH-commute : ∀ {k} (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets])
+                    → (F : Functor (Sets^ k) Sets)
+                    → (η : NaturalTransformation (Functor.F₀ H F) F)
+                    → {Xs Ys : Vec Set k}
+                    → (f : VecFSpace Xs Ys)
+                    → Sets Categories.Category.[
+                        foldH-η H F η Ys ∘' (Functor.F₁ (fixHFunc H) f)
+                        ≈ Functor.F₁ F f ∘' (foldH-η H F η Xs)
+                    ]
+  foldH-commute H F η {Xs} {Ys} f {hffin x} = 
+    let η-Ys = NaturalTransformation.η η Ys
+        η-Xs = NaturalTransformation.η η Xs
+        H-foldη = Functor.F₁ H (foldH H F η)
+        H-foldη-Xs = NaturalTransformation.η H-foldη Xs
+        H-foldη-Ys = NaturalTransformation.η H-foldη Ys
+        HμH = Functor.F₀ H (fixHFunc H)
+        HμH-f = Functor.F₁ HμH f
+        -- r = foldH-commute H F η f x
+        
+        HF-f = Functor.F₁ (Functor.F₀ H F) f
+        
+        η-com = NaturalTransformation.commute η
+
+        -- H (foldH H F η) is a natural transformation 
+        -- from HμH to HF. we use it's commutativity property 
+        -- to prove that foldH is commutative 
+        H-foldη-com : 
+          NaturalTransformation.η H-foldη Ys (Functor.F₁ HμH f x)
+          ≡ Functor.F₁ (Functor.F₀ H F) f (NaturalTransformation.η H-foldη Xs x)
+        H-foldη-com = 
+          NaturalTransformation.commute (Functor.F₁ H (foldH H F η)) f
+
+     in begin
+       η-Ys (H-foldη-Ys (HμH-f x))
+   ≡⟨ ≡.cong η-Ys H-foldη-com ⟩
+       η-Ys (HF-f (H-foldη-Xs x))
+     ≡⟨ η-com f ⟩
+       Functor.F₁ F f (η-Xs (H-foldη-Xs x))
+     ∎   
+
+
+  foldH : ∀ {k} → (H : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) 
+          → (F : Functor (Sets^ k) Sets)
+          → NaturalTransformation (Functor.F₀ H F) F
+          → NaturalTransformation (fixHFunc H) F
+  foldH H F η = 
+    record { η = foldH-η H F η  
+           ; commute = foldH-commute H F η
+           ; sym-commute = λ {Xs} {Ys} f {x} → ≡.sym (foldH-commute H F η f {x}) } 
 

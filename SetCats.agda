@@ -3,7 +3,7 @@
 
 
 
-module SetCatslzero where
+module SetCats where
 
 open import Relation.Binary using (IsEquivalence ; Reflexive ; Transitive ; Symmetric)
 -- open TypeExpr

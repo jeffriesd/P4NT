@@ -9,9 +9,14 @@ open _∋_
 open import Categories.Category using (Category)
 open import Categories.Functor using (Functor ; _∘F_ ) renaming (id to idF)
 open import NestedSetSemantics 
+open AbT
+open VarSem-TC-properties
+open VarSem-FV-properties
+
 open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
 open import HFixFunctorLib using (fixH)
+open import NatTypeSemProperties
 
 open import Agda.Builtin.Unit
 
@@ -21,6 +26,8 @@ open import Data.Vec using (Vec ; _∷_ ;  [])
 open import Categories.Category.Construction.Functors using (Functors ; eval ; module curry)
 open import Data.Product hiding (curry) renaming (_×_ to _×'_)
 open import Utils
+open CatUtil
+
 open ≃-Reasoning 
 
 open import Relation.Nullary using (Dec; yes; no; ¬_; _because_; ofʸ; ofⁿ)
@@ -43,6 +50,15 @@ open import Categories.NaturalTransformation.NaturalIsomorphism using (_≃_) re
 module SetSemExtendEnv where 
 
 
+-- TODO  3/31
+-- - prove VarSemT ≃ VarSemTC ∘ extendEnvFVar 
+-- - need to use the fact that φ≢α (in arity or in Id) to deduce that VarSem-FV φ ≃ VarSem-FV φ ∘F extendEnvFVar α 
+-- 
+-- - prove SetSem ⊢H ≃ (eval ∘F  (VarSem-FV (α ^F 0) ※ SetSemVec ⊢Fs)) ∘F extendH 
+
+
+
+
 private 
   variable 
     k : ℕ
@@ -52,20 +68,6 @@ private
     α : FVar 0
 
 mutual 
-  -- -- don't really need this 
-  -- TEnv∘FEnv-extendFunCtx-≃ : ∀ {φ : FVar k} {αs : Vec (FVar 0) k}
-  --         → (⊢F : Γ ≀ (∅ ,++ αs) ,, φ  ⊢ F)
-  --         → (⊢H : Γ ≀ Φ ⊢ H)
-  --         → (TEnv ⊢F ∘F ForgetFVEnv)
-  --         ≃ (TEnv ⊢F ∘F ForgetFVEnv) ∘F extendEnvFVar α ⊢H 
-  -- TEnv∘FEnv-extendFunCtx-≃ {α = α} ⊢F ⊢H = begin≃
-  --     TEnv ⊢F ∘F ForgetFVEnv
-  --   ≃⟨ (TEnv ⊢F) ≃ˡ (NI.sym (ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv α ⊢H)) ⟩
-  --     TEnv ⊢F ∘F (ForgetFVEnv ∘F extendEnvFVar α ⊢H) 
-  --   ≃˘⟨ NI.associator (extendEnvFVar α ⊢H) ForgetFVEnv (TEnv ⊢F) ⟩
-  --     (TEnv ⊢F ∘F ForgetFVEnv) ∘F extendEnvFVar α ⊢H
-  --   ≃∎
-
 
   -- [[F [ α := H ] ]] ρ  ≡   [[F]] ρ [ α := [[H]] ]
   -- but for vectors of F 
@@ -73,7 +75,7 @@ mutual
                           → (⊢H : Γ ≀ Φ ⊢ H)
                           → SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs))
                           ≃ SetSemVec ⊢Fs ∘F extendEnvFVar α ⊢H
-  SetSemVec-extendFunCtx-≃ {α = α} {Fs = []} ⊢Fs ⊢H = ConstF-∘-≃  (Sets^ 0) (extendEnvFVar α ⊢H) -- need proof that ConstF G ≃ ConstF G ∘F .... 
+  SetSemVec-extendFunCtx-≃ {α = α} {Fs = []} ⊢Fs ⊢H = ConstF-∘-≃  (Sets^ 0) (extendEnvFVar α ⊢H) 
   SetSemVec-extendFunCtx-≃ {k = suc n} {α = α} {H} {Fs = F ∷ Fs} (⊢F , ⊢Fs) ⊢H = 
     let ⟦F[H]⟧ = SetSem (fo-subst-preserves-typing F H ⊢F ⊢H) 
         ⟦Fs[H]⟧ = SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs))
@@ -105,54 +107,6 @@ mutual
        ≃˘⟨ NI.associator extendH (⟦F⟧ ※ ⟦Fs⟧) Cons ⟩
           (Cons ∘F (⟦F⟧ ※ ⟦Fs⟧)) ∘F extendH
         ≃∎ 
-
-  -- if we explicitly forget about functorial part of environment, 
-  -- any extensions of the functorial part of the environment have no effect 
-  ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv : ∀ (α : FVar 0) → (⊢H : Γ ≀ Φ ⊢ H)
-                                 → ForgetFVEnv ∘F extendEnvFVar α ⊢H 
-                                 ≃ ForgetFVEnv 
-  ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv α ⊢H = 
-               record { F⇒G = record { η = λ _ → Category.id SetEnvCat ; commute = λ f → ≡.refl ; sym-commute = λ f → ≡.refl } 
-                      ; F⇐G = record { η = λ _ → Category.id SetEnvCat ; commute = λ f → ≡.refl ; sym-commute = λ f → ≡.refl } 
-                      ; iso = λ _ → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } } 
-
-
-  μ-SetSem-extend-≡ : ∀ {φ : FVar k}
-                              {αs : Vec (FVar 0) k} {F : TypeExpr} 
-                              → (⊢F : Γ ≀ (∅ ,++ αs) ,, φ ⊢ F)
-                              {Gs : Vec TypeExpr k} 
-                              → (⊢Gs : foreach (_≀_⊢_ Γ (Φ ,, α)) Gs)
-                              → (⊢H : Γ ≀ Φ ⊢ H) 
-                              → SetSem (fo-subst-preserves-typing (μ φ [λ αs , F ] Gs) H (μ-I F ⊢F Gs ⊢Gs) ⊢H)
-                              ≡ (eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))))
-  μ-SetSem-extend-≡ ⊢F ⊢Gs ⊢H = ≡.refl 
-
-
--- SetSemVec : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx}
---               → {Fs : Vec TypeExpr k}
---               → foreach (λ F → Γ ≀ Φ ⊢ F) Fs
---               → Functor SetEnvCat (Sets^ k)
-
-
-
-  -- fixT-extend-≃ : fixT∘FEnv
-  --             ≃ fixT∘FEnv ∘F extendH
-  -- fixT-extend-≃ = 
-  --   begin≃
-  --     (fixH  ∘F TF) ∘F ForgetFVEnv
-  --     ≃˘⟨ (fixH  ∘F TF) ≃ˡ (ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv α ⊢H) ⟩ --  (fixH  ∘F (TEnv ⊢F)) ≃ˡ (NI.sym ...Forget...)
-  --     (fixH  ∘F TF) ∘F (ForgetFVEnv ∘F extendH)
-  --     ≃˘⟨ NI.associator extendH ForgetFVEnv (fixH  ∘F TF) ⟩
-  --     ((fixH  ∘F TF) ∘F ForgetFVEnv) ∘F extendH
-  --     ≃∎
-
-
-  -- μ-SetSem-extendFunCtx-≃3 : ∀ {φ : FVar k}
-  --                             {αs : Vec (FVar 0) k} 
-  --                             → (⊢F : Γ ≀ (∅ ,++ αs) ,, φ ⊢ F)
-  --                             {Gs : Vec TypeExpr k} 
-  --                             → (⊢Gs : foreach (_≀_⊢_ Γ (Φ ,, α)) Gs)
-  --                             → (⊢H : Γ ≀ Φ ⊢ H) 
 
 
   μ-SetSem-extendFunCtx-≃2 : ∀ {φ : FVar k}
@@ -211,23 +165,8 @@ mutual
 
 
 
-  -- eval : Bifunctor (Functors C D) C D 
-  -- eval : Functor (Product (Functors C D) C) D 
 
-  eval-≃ : ∀ {ao al ae bo bl be co cl ce ddo dl de : Level} {A : Category ao al ae} {B : Category bo bl be} {C : Category co cl ce} {D : Category ddo dl de}
-           → (F : Functor A (Product (Functors C D) C)) 
-           → (G : Functor B (Product (Functors C D) C))
-           → (H : Functor A B) 
-           → F ≃ (G ∘F H) → eval ∘F F ≃ (eval ∘F G) ∘F H 
-  eval-≃ F G H η = 
-      begin≃ 
-            eval ∘F F
-            ≃⟨ eval ≃ˡ η ⟩ 
-            eval ∘F (G ∘F H)
-            ≃˘⟨ NI.associator H G eval ⟩ 
-            (eval ∘F G) ∘F H
-           ≃∎ 
-
+-- - This works and is used, just commenting out while working on other functions 
 
   μ-SetSem-extendFunCtx-≃ : ∀ {φ : FVar k}
                               {αs : Vec (FVar 0) k} 
@@ -261,117 +200,17 @@ mutual
       eval-≃ {A = SetEnvCat} {B = SetEnvCat} {C = Sets^ k} {D = Sets}  (fixT∘FEnv ※ ⟦Gs[H]⟧)  (fixT∘FEnv ※ ⟦Gs⟧) extendH  (μ-SetSem-extendFunCtx-≃2 {k} {Γ = Γ} {F} {Φ = Φ} {α} {H = H} {φ} {αs} ⊢F {Gs} ⊢Gs ⊢H)
 
 
-  {-
-    eval-≃ {A = SetEnvCat} {B = SetEnvCat} {C = Sets^ k} {D = Sets}  (fixT∘FEnv ※ ⟦Gs[H]⟧)  (fixT∘FEnv ※ ⟦Gs⟧) extendH  
-           (μ-SetSem-extendFunCtx-≃2 {k} {Γ = Γ} {F} {Φ = Φ} {α} {H = H} {φ} {αs} ⊢F {Gs} ⊢Gs ⊢H)
-           -}
+
+  -- μ-sem-lem : ∀ {φ : FVar k} {αs : Vec (FVar 0) k} 
+  --             → (⊢F : Γ ≀ (∅ ,++ αs) ,, φ ⊢ F)
+  --             {Gs : Vec TypeExpr k} 
+  --             → (⊢Gs : foreach (_≀_⊢_ Γ (Φ ,, α)) Gs)
+  --             → (⊢H : Γ ≀ Φ ⊢ H) 
+  --             → SetSem (fo-subst-preserves-typing (μ φ [λ αs , F ] Gs) H (μ-I F ⊢F Gs ⊢Gs) ⊢H)
+  --             ≡ eval {C = Sets^ k} {D = Sets} ∘F ((fixH ∘F curry.F₀ (curry.F₀ (SetSem ⊢F ∘F extendSetEnv-ρ×As-inline αs ∘F (extendSetEnv2 φ ∘F πˡ ※ πʳ)))) ∘F ForgetFVEnv ※ SetSemVec (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
+  -- μ-sem-lem ⊢F ⊢Gs ⊢H = {!   !} 
 
 
-
-{-
-    let 
-        ⟦Gs⟧ = SetSemVec {k} {Γ} {Φ ,, α} {Gs} ⊢Gs
-        ⟦Gs[H]⟧ = SetSemVec {k} {Γ} {Φ} {replaceVec Gs α H} (replaceVec-preserves {k} {Γ} {Φ} {α} H Gs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Gs ⊢H ⊢Gs))
-        extendH = extendEnvFVar α ⊢H
-
-        ⟦Gs[H]⟧≃⟦Gs⟧∘extend : ⟦Gs[H]⟧ ≃ (⟦Gs⟧ ∘F extendH)
-        ⟦Gs[H]⟧≃⟦Gs⟧∘extend = SetSemVec-extendFunCtx-≃ ⊢Gs ⊢H 
-        --
-        TF : Functor SetEnvCat ([[ [Sets^ k ,Sets] , [Sets^ k ,Sets] ]])
-        TF = TEnv {k} {Γ} {F} {φ} {αs} ⊢F
-        --
-        fixT∘FEnv : Functor SetEnvCat [Sets^ k ,Sets]
-        fixT∘FEnv = (fixH ∘F TF) ∘F ForgetFVEnv 
-       in begin≃ 
-              -- (eval ∘F ((fixH ∘F (TEnv {k} {Γ} {F} {φ} {αs} ⊢F)) ∘F ForgetFVEnv ※ SetSemVec {k} {Γ} {Φ} {replaceVec Gs α H} (replaceVec-preserves {k} {Γ} {Φ} {α} H Gs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Gs ⊢H ⊢Gs)))) 
-
-            eval ∘F (fixT∘FEnv ※ ⟦Gs[H]⟧)
-            ≃⟨ {!   !} ⟩ 
-            eval ∘F ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-            ≃⟨ {!   !} ⟩ 
-            -- (eval ∘F (fixT∘FEnv ※ ⟦Gs⟧)) ∘F extendH
-            {!((eval ∘F ((fixH ∘F (TEnv {k} {Γ} {F} {φ} {αs} ⊢F)) ∘F ForgetFVEnv ※ SetSemVec {k} {Γ} {Φ ,, α} {Gs} ⊢Gs)) ∘F extendEnvFVar α ⊢H)!} -- ((eval ∘F ((fixH ∘F (TEnv {k} {Γ} {F} {φ} {αs} ⊢F)) ∘F ForgetFVEnv ※ SetSemVec {k} {Γ} {Φ ,, α} {Gs} ⊢Gs)) ∘F extendEnvFVar α ⊢H)           
-            ≃∎
-
-      --  begin≃ 
-      --           (eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec (replaceVec-preserves {k} {Γ} {Φ} {α} H Gs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Gs ⊢H ⊢Gs))))
-      --       ≃⟨ {!   !} ⟩ 
-      --           ((eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec ⊢Gs)) ∘F extendEnvFVar α ⊢H)
-      --       ≃∎
-
-
-
-  -- foreach-preserves-subst : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
-  {-
-    let 
-        ⟦Gs⟧ = SetSemVec ⊢Gs
-        ⟦Gs[H]⟧ = SetSemVec (replaceVec-preserves {k} {Γ} {Φ} {α} H Gs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Gs ⊢H ⊢Gs))
-        ⟦Gs[H]⟧≃⟦Gs⟧∘extend = SetSemVec-extendFunCtx-≃ ⊢Gs ⊢H 
-        extendH = extendEnvFVar α ⊢H
-        --
-        TF : Functor SetEnvCat ([[ [Sets^ n ,Sets] , [Sets^ n ,Sets] ]])
-        TF = TEnv ⊢F 
-        --
-        fixT∘FEnv : Functor SetEnvCat [Sets^ n ,Sets]
-        fixT∘FEnv = (fixH ∘F TF) ∘F ForgetFVEnv 
-        -- 
-        fixT-extend-※ : ((fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-                      ≃ ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-        fixT-extend-※ = ※-distrib [Sets^ n ,Sets] (Sets^ n) fixT∘FEnv ⟦Gs⟧ extendH
-
-        fixT-extend-≃ :  fixT∘FEnv
-                    ≃ fixT∘FEnv ∘F extendH
-        fixT-extend-≃ = 
-          begin≃
-            (fixH  ∘F TF) ∘F ForgetFVEnv
-            ≃˘⟨ (fixH  ∘F TF) ≃ˡ (ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv α ⊢H) ⟩ --  (fixH  ∘F (TEnv ⊢F)) ≃ˡ (NI.sym ...Forget...)
-            (fixH  ∘F TF) ∘F (ForgetFVEnv ∘F extendH)
-            ≃˘⟨ NI.associator extendH ForgetFVEnv (fixH  ∘F TF) ⟩
-            ((fixH  ∘F TF) ∘F ForgetFVEnv) ∘F extendH
-            ≃∎
-
-        ※-extend-≃ : (fixT∘FEnv ※ ⟦Gs[H]⟧)
-                -- ≃ (fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH)
-                ≃ ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-        ※-extend-≃ =  
-          begin≃
-            (fixT∘FEnv ※ ⟦Gs[H]⟧)
-            ≃⟨ NI.refl ※ⁿⁱ ⟦Gs[H]⟧≃⟦Gs⟧∘extend ⟩ -- NI.refl ※ⁿⁱ ..Gs..
-            (fixT∘FEnv ※ (⟦Gs⟧ ∘F extendH))
-            ≃⟨ fixT-extend-≃ ※ⁿⁱ NI.refl ⟩ -- .. ※ⁿⁱ  NI.refl
-            ((fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-            ≃⟨ fixT-extend-※ ⟩ -- distrib 
-            ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-            ≃∎
-
-        -- 
-        -- still very slow... maybe need implicit args 
-        in 
-        -}
-
-
--- begin≃
--- (eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))))
-        -- ≃⟨ ? ⟩ 
-        -- ((eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec ⊢Gs)) ∘F extendEnvFVar α ⊢H)
-        -- ≃∎
-
-          -- --   SetSem (fo-subst-preserves-typing (μ φ [λ αs , F ] Gs) H (μ-I F ⊢F Gs ⊢Gs) ⊢H)
-          -- -- ≃⟨ NI-≡ {! μ-SetSem-extend-≡ ⊢F ⊢Gs ⊢H  !} ⟩ 
-          --   eval ∘F (fixT∘FEnv ※ ⟦Gs[H]⟧)
-          -- ≃⟨ {!   !} ⟩ 
-          -- -- ≃⟨ eval ≃ˡ ※-extend-≃ ⟩ 
-          --   eval ∘F ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-          -- -- ≃˘⟨ NI.associator extendH  (fixT∘FEnv ※ ⟦Gs⟧) eval ⟩ 
-          -- ≃˘⟨ {!!} ⟩ 
-          --   (eval ∘F (fixT∘FEnv ※ ⟦Gs⟧)) ∘F extendH
-          -- -- ≃⟨ {! NI.refl    !} ⟩ 
-          -- --   SetSem (μ-I F ⊢F Gs ⊢Gs) ∘F extendEnvFVar α ⊢H
-          -- ≃∎
-
-
-
--}
 
   SetSem-extendFunCtx-≃ : ∀ (⊢F : Γ ≀ (Φ ,, α) ⊢ F)
                         → (⊢H : Γ ≀ Φ ⊢ H)
@@ -379,14 +218,140 @@ mutual
                         ≃ (SetSem {Γ} {Φ ,, α} {F} ⊢F) ∘F extendEnvFVar {Γ} {Φ} {H} α ⊢H
   SetSem-extendFunCtx-≃ {α = α} 𝟘-I ⊢H = ConstF-∘-≃ Sets (extendEnvFVar α ⊢H)
   SetSem-extendFunCtx-≃ {α = α} 𝟙-I ⊢H = ConstF-∘-≃ Sets (extendEnvFVar α ⊢H)
-  SetSem-extendFunCtx-≃ {α = α} (AppT-I {φ = φ} Γ∋φ Fs ⊢Fs) ⊢H = {!  
-        begin≃
-          eval ∘F (VarSem-TC φ ※ SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs)))
-        ≃⟨ ? ⟩
-          (eval ∘F (VarSem-TC φ ※ SetSemVec ⊢Fs)) ∘F extendEnvFVar α ⊢H
-        ≃∎     !}
+  SetSem-extendFunCtx-≃ {Γ} {Φ} {α = α} {H = H} (AppT-I {k = k} {φ = φ} Γ∋φ Fs ⊢Fs) ⊢H = 
+    let ⟦Fs[H]⟧ = SetSemVec {k} {Γ} {Φ} {replaceVec Fs α H} (replaceVec-preserves {k} {Γ} {Φ} {α} H Fs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Fs ⊢H ⊢Fs))
+        ⟦Fs⟧    = SetSemVec {k} {Γ} {Φ ,, α} {Fs} ⊢Fs
+        extendH = extendEnvFVar {Γ} {Φ} {H} α ⊢H
 
-  SetSem-extendFunCtx-≃ {α = α} (AppF-I Φ∋φ Fs ⊢Fs) ⊢H = {!   !}
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend : ⟦Fs[H]⟧ ≃ (⟦Fs⟧ ∘F extendH)
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend = SetSemVec-extendFunCtx-≃ ⊢Fs ⊢H 
+
+        VarSem-proof : (VarSem-TC φ ※ ⟦Fs[H]⟧) ≃ (VarSem-TC φ ※ ⟦Fs⟧) ∘F extendH
+        VarSem-proof =
+          begin≃
+                ( VarSem-TC φ ※ ⟦Fs[H]⟧ )
+                ≃⟨   (NI.refl { x = VarSem-TC φ})  ※ⁿⁱ ⟦Fs[H]⟧≃⟦Fs⟧∘extend       ⟩
+                ( VarSem-TC φ ※ ⟦Fs⟧ ∘F extendH )
+                -- VarSem-TC-extend-≃ : VarSem-TC φ
+                --                      ≃ VarSem-TC φ ∘F extendEnvFVar α ⊢H 
+                ≃⟨   VarSem-TC-extend-≃ α ⊢H φ  ※ⁿⁱ (NI.refl {x = (⟦Fs⟧ ∘F extendH)})     ⟩
+                ( VarSem-TC φ ∘F extendH ※ ⟦Fs⟧ ∘F extendH )
+                ≃⟨  ※-distrib [Sets^ k ,Sets] (Sets^ k) (VarSem-TC φ) ⟦Fs⟧ extendH   ⟩
+                (VarSem-TC φ ※ ⟦Fs⟧) ∘F extendH
+               ≃∎    
+
+        -- ※-distrib : {o₁ ℓ₁ e₁ o₂ ℓ₂ e₂ : Level} {A : Category o₁ ℓ₁ e₁} {B : Category o₂ ℓ₂ e₂}
+        --   → (F : Functor B C) → (G : Functor B D) → (H : Functor A B)
+        --   → ((F ∘F H) ※ (G ∘F H)) ≃ ((F ※ G) ∘F H)
+
+     in    eval-≃ (VarSem-TC {k} φ ※ ⟦Fs[H]⟧ ) (VarSem-TC {k} φ ※ ⟦Fs⟧ ) (extendH) VarSem-proof        
+
+        -- begin≃
+        --   eval ∘F (VarSem-TC {k} φ ※ SetSemVec {k} {Γ} {Φ} {replaceVec Fs α H} (replaceVec-preserves {k} {Γ} {Φ} {α} H Fs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Fs ⊢H ⊢Fs)))
+        -- ≃⟨ {!!} ⟩ 
+        --   (eval ∘F (VarSem-TC {k} φ ※ SetSemVec {k} {Γ} {Φ ,, α} {Fs} ⊢Fs)) ∘F extendEnvFVar {Γ} {Φ} {H} α ⊢H
+        -- ≃∎     
+
+
+  -- F = VarSem-TC \dotstar SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs))
+  -- G = VarSem-TC \dotstar SetSemVec ⊢Fs
+  -- H = extendEnvFVar α ⊢H 
+
+  -- eval-≃ : ∀ {ao al ae bo bl be co cl ce ddo dl de : Level} {A : Category ao al ae} {B : Category bo bl be} {C : Category co cl ce} {D : Category ddo dl de}
+  --          → (F : Functor A (Product (Functors C D) C)) 
+  --          → (G : Functor B (Product (Functors C D) C))
+  --          → (H : Functor A B) 
+  --          → F ≃ (G ∘F H) → eval ∘F F ≃ (eval ∘F G) ∘F H 
+
+
+-- SetSemVec {k} {Γ} {Φ} {replaceVec Gs α H} (replaceVec-preserves {k} {Γ} {Φ} {α} H Gs ⊢H (foreach-preserves-subst {k} {Γ} {Φ} {α} H Gs ⊢H ⊢Gs))
+
+-- AppF goal : 
+--     SetSem (fo-subst-preserves-typing AppF φ [ Fs ] H (AppF-I Φ∋φ Fs ⊢Fs) ⊢H)
+--     ≃ SetSem (AppF-I Φ∋φ Fs ⊢Fs) ∘F extendEnvFVar α ⊢H
+
+  SetSem-extendFunCtx-≃ {Γ} {Φ} {α = α ^F zero} {H = H} (AppF-I {k = zero} {φ = φ ^F zero} Φ∋φ [] tt) ⊢H with φ ≟ α 
+  -- WTS 
+  -- SetSem ⊢H ≃ 
+  -- (eval ∘F (VarSem-FV (α ^F 0) ※ const [])) 
+  --   ∘F extendEnvFVar (α ^F 0) ⊢H 
+
+  -- VarSem-FV-subst-α-≃ : SetSem ⊢H 
+  --                     ≃ (eval ∘F (VarSem-FV α ※ ConstF [])) ∘F extendEnvFVar α ⊢H 
+
+  ... | yes ≡.refl = VarSem-FV-subst-α-≃ {k = zero} {Γ} {Φ} {H} α ⊢H φ    -- this takes a while to type-check, maybe make it abstract 
+  ... | no ¬φ≡α = 
+    let ⟦Fs[H]⟧ = SetSemVec {zero} {Γ} {Φ} {replaceVec [] (α ^F 0) H} (replaceVec-preserves {zero} {Γ} {Φ} {α ^F 0} H [] ⊢H (foreach-preserves-subst {zero} {Γ} {Φ} {α ^F 0} H [] ⊢H tt))
+        ⟦Fs⟧    = SetSemVec {zero} {Γ} {Φ ,, (α ^F 0)} {[]} tt
+        extendH = extendEnvFVar {Γ} {Φ} {H} (α ^F 0) ⊢H
+
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend : ⟦Fs[H]⟧ ≃ (⟦Fs⟧ ∘F extendH)
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend = SetSemVec-extendFunCtx-≃ {α = α ^F 0} tt ⊢H 
+
+        -- TODO generalize this to use the same thing in this case and next case 
+        VarSem-FV-proof : (VarSem-FV (φ ^F zero) ※ ⟦Fs[H]⟧) ≃ (VarSem-FV (φ ^F zero) ※ ⟦Fs⟧) ∘F extendH
+        VarSem-FV-proof =
+          begin≃
+                ( VarSem-FV (φ ^F zero) ※ ⟦Fs[H]⟧ )
+                ≃⟨   (NI.refl { x = VarSem-FV (φ ^F zero)})  ※ⁿⁱ ⟦Fs[H]⟧≃⟦Fs⟧∘extend       ⟩
+                ( VarSem-FV (φ ^F zero) ※ ⟦Fs⟧ ∘F extendH )
+                -- VarSem-FV-extend-≃ : VarSem-FV φ
+                --                      ≃ VarSem-FV φ ∘F extendEnvFVar α ⊢H 
+                -- ≃⟨   VarSem-FV-extend-≃ α ⊢H φ  ※ⁿⁱ (NI.refl {x = (⟦Fs⟧ ∘F extendH)})     ⟩
+                ≃⟨ VarSem-FV-extend-diffId-≃ {k = zero} {Γ} {Φ} {H} α ⊢H φ ¬φ≡α ※ⁿⁱ (NI.refl {x = (⟦Fs⟧ ∘F extendH)})     ⟩
+                ( VarSem-FV (φ ^F zero) ∘F extendH ※ ⟦Fs⟧ ∘F extendH )
+                ≃⟨  ※-distrib [Sets^ (zero) ,Sets] (Sets^ (zero)) (VarSem-FV (φ ^F zero)) ⟦Fs⟧ extendH   ⟩
+                (VarSem-FV (φ ^F zero) ※ ⟦Fs⟧) ∘F extendH
+               ≃∎    
+
+    in   eval-≃ (VarSem-FV {zero} (φ ^F (zero)) ※ ⟦Fs[H]⟧) (VarSem-FV {zero} (φ ^F (zero))  ※ ⟦Fs⟧) extendH VarSem-FV-proof     
+    -- eval-≃ (VarSem-FV {zero} (φ ^F (zero)) ※ ⟦Fs[H]⟧) (VarSem-FV {zero} (φ ^F (zero))  ※ ⟦Fs⟧) extendH VarSem-FV-proof 
+
+
+  SetSem-extendFunCtx-≃ {Γ} {Φ} {α = α ^F zero} {H = H} (AppF-I {k = suc k} {φ = φ ^F suc k} Φ∋φ (F ∷ Fs) (⊢F , ⊢Fs)) ⊢H = 
+    let ⟦Fs[H]⟧ = SetSemVec {suc k} {Γ} {Φ} {replaceVec (F ∷ Fs) (α ^F 0) H} (replaceVec-preserves {suc k} {Γ} {Φ} {α ^F 0} H (F ∷ Fs) ⊢H (foreach-preserves-subst {suc k} {Γ} {Φ} {α ^F 0} H (F ∷ Fs) ⊢H (⊢F , ⊢Fs)))
+        ⟦Fs⟧    = SetSemVec {suc k} {Γ} {Φ ,, (α ^F 0)} {F ∷ Fs} (⊢F , ⊢Fs)
+        extendH = extendEnvFVar {Γ} {Φ} {H} (α ^F 0) ⊢H
+
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend : ⟦Fs[H]⟧ ≃ (⟦Fs⟧ ∘F extendH)
+        ⟦Fs[H]⟧≃⟦Fs⟧∘extend = SetSemVec-extendFunCtx-≃ (⊢F , ⊢Fs) ⊢H 
+
+        VarSem-FV-proof : (VarSem-FV (φ ^F suc k) ※ ⟦Fs[H]⟧) ≃ (VarSem-FV (φ ^F suc k) ※ ⟦Fs⟧) ∘F extendH
+        VarSem-FV-proof =
+          begin≃
+                ( VarSem-FV (φ ^F suc k) ※ ⟦Fs[H]⟧ )
+                ≃⟨   (NI.refl { x = VarSem-FV (φ ^F suc k)})  ※ⁿⁱ ⟦Fs[H]⟧≃⟦Fs⟧∘extend       ⟩
+                ( VarSem-FV (φ ^F suc k) ※ ⟦Fs⟧ ∘F extendH )
+                -- VarSem-FV-extend-≃ : VarSem-FV φ
+                --                      ≃ VarSem-FV φ ∘F extendEnvFVar α ⊢H 
+                ≃⟨   VarSem-FV-extend-≃ α ⊢H φ  ※ⁿⁱ (NI.refl {x = (⟦Fs⟧ ∘F extendH)})     ⟩
+                ( VarSem-FV (φ ^F suc k) ∘F extendH ※ ⟦Fs⟧ ∘F extendH )
+                ≃⟨  ※-distrib [Sets^ (suc k) ,Sets] (Sets^ (suc k)) (VarSem-FV (φ ^F suc k)) ⟦Fs⟧ extendH   ⟩
+                (VarSem-FV (φ ^F suc k) ※ ⟦Fs⟧) ∘F extendH
+               ≃∎    
+
+    in eval-≃ (VarSem-FV {suc k} (φ ^F (suc k)) ※ ⟦Fs[H]⟧) (VarSem-FV {suc k} (φ ^F (suc k))  ※ ⟦Fs⟧) extendH VarSem-FV-proof 
+
+
+  -- fo-subst-preserves-typing {α = α ^F 0} AppF (φ ^F 0) [ [] ] H (AppF-I Φ,α∋φ [] ⊤) ⊢H with φ ≟ α
+  -- ... | yes refl = ⊢H
+  -- ... | no ¬φ≡α = AppF-I (diffIdFun (≢-sym ¬φ≡α) Φ,α∋φ) [] Data.Unit.tt
+  -- fo-subst-preserves-typing {α = α ^F 0} AppF φ ^F suc k [ G ∷ Gs ] H (AppF-I Φ,α∋φ .(G ∷ Gs) (⊢G , ⊢Gs)) ⊢H = 
+  --   AppF-I (diffArityFun (λ()) Φ,α∋φ) ((G [ (α ^F 0) := H ]) ∷ replaceVec Gs (α ^F 0) H)
+  --           ((fo-subst-preserves-typing G H ⊢G ⊢H) , (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
+
+
+
+  -- SetSem-extendFunCtx-≃ {Γ} {Φ} {α = α ^F j} {H = H} (AppF-I {k = k} {φ = φ ^F k} Φ∋φ Fs ⊢Fs) ⊢H with eqNat k j | φ ≟ α 
+  -- ... | yes ≡.refl | yes ≡.refl = {!   !}
+  -- -- next two cases coincide 
+  -- -- -- need to use the fact that φ≢α (in arity or in Id) to deduce that VarSem-FV φ ≃ VarSem-FV φ ∘F extendEnvFVar α 
+  -- ... | yes ≡.refl | no φ≢α   = {!   !}
+  -- ... | no k≢j   | _ = {!   !}
+ 
+ --  {! SetSem
+ --    (fo-subst-preserves-typing AppF φ [ Fs ] H (AppF-I Φ∋φ Fs ⊢Fs) ⊢H)
+ --    ≃ SetSem (AppF-I Φ∋φ Fs ⊢Fs) ∘F extendEnvFVar α ⊢H  !}
 
   -- SetSum ∘F
   --     (SetSem (fo-subst-preserves-typing F H ⊢F ⊢H) ※
@@ -407,9 +372,11 @@ mutual
       in 
         begin≃ 
           SetSum ∘F (⟦F[H]⟧ ※ ⟦G[H]⟧)
-        ≃⟨ SetSum ≃ˡ (⟦F[H]⟧≃⟦F⟧∘extend ※ⁿⁱ ⟦G[H]⟧≃⟦G⟧∘extend) ⟩
-          SetSum ∘F ((⟦F⟧ ∘F extendH) ※ (⟦G⟧ ∘F extendH))
-        ≃⟨ SetSum ≃ˡ (※-distrib Sets Sets ⟦F⟧ ⟦G⟧ extendH) ⟩
+        ≃⟨ SetSum ≃ˡ compose-distrib-≃ {F = ⟦F[H]⟧}  {F' = ⟦F⟧} {G = ⟦G[H]⟧} {G' = ⟦G⟧} {H = extendH} ⟦F[H]⟧≃⟦F⟧∘extend ⟦G[H]⟧≃⟦G⟧∘extend  ⟩
+        -- ≃⟨ SetSum ≃ˡ {! compose-distrib-≃ {F = ⟦F[H]⟧} {G = ⟦G[H]⟧} {F' = ⟦F⟧} {G' = ⟦G⟧} {H = extendH} ⟦F[H]⟧≃⟦F⟧∘extend ⟦G[H]⟧≃⟦G⟧∘extend  !}  ⟩
+        -- ≃⟨ SetSum ≃ˡ (⟦F[H]⟧≃⟦F⟧∘extend ※ⁿⁱ ⟦G[H]⟧≃⟦G⟧∘extend) ⟩
+        --   SetSum ∘F ((⟦F⟧ ∘F extendH) ※ (⟦G⟧ ∘F extendH))
+        -- ≃⟨ SetSum ≃ˡ (※-distrib Sets Sets ⟦F⟧ ⟦G⟧ extendH) ⟩
           SetSum ∘F ((⟦F⟧ ※ ⟦G⟧) ∘F extendH)
        ≃˘⟨ NI.associator extendH (⟦F⟧ ※ ⟦G⟧) SetSum ⟩
           (SetSum ∘F (⟦F⟧ ※ ⟦G⟧)) ∘F extendH
@@ -427,282 +394,35 @@ mutual
       in 
         begin≃ 
           SetProd ∘F (⟦F[H]⟧ ※ ⟦G[H]⟧)
-        ≃⟨ SetProd ≃ˡ (⟦F[H]⟧≃⟦F⟧∘extend ※ⁿⁱ ⟦G[H]⟧≃⟦G⟧∘extend) ⟩
-          SetProd ∘F ((⟦F⟧ ∘F extendH) ※ (⟦G⟧ ∘F extendH))
-        ≃⟨ SetProd ≃ˡ (※-distrib Sets Sets ⟦F⟧ ⟦G⟧ extendH) ⟩
+        ≃⟨ SetProd ≃ˡ compose-distrib-≃ {F = ⟦F[H]⟧}  {F' = ⟦F⟧} {G = ⟦G[H]⟧} {G' = ⟦G⟧} {H = extendH} ⟦F[H]⟧≃⟦F⟧∘extend ⟦G[H]⟧≃⟦G⟧∘extend  ⟩
+        -- ≃⟨ SetProd ≃ˡ (⟦F[H]⟧≃⟦F⟧∘extend ※ⁿⁱ ⟦G[H]⟧≃⟦G⟧∘extend) ⟩
+        --   SetProd ∘F ((⟦F⟧ ∘F extendH) ※ (⟦G⟧ ∘F extendH))
+        -- ≃⟨ SetProd ≃ˡ (※-distrib Sets Sets ⟦F⟧ ⟦G⟧ extendH) ⟩
           SetProd ∘F ((⟦F⟧ ※ ⟦G⟧) ∘F extendH)
         ≃˘⟨ NI.associator extendH (⟦F⟧ ※ ⟦G⟧) SetProd ⟩
           (SetProd ∘F (⟦F⟧ ※ ⟦G⟧)) ∘F extendH
         ≃∎
 
-  -- could use more general lemma that says precomposing NatSem with any functor of environments doesn't change 
-  SetSem-extendFunCtx-≃ {α = α} (Nat-I ⊢F ⊢G) ⊢H = {!   !}
+
+
+
+
+        -- okay, Sum and product cases also have the form of 
+        -- 
+        -- 
+        -- (F ※ G) 
+        -- (F' ∘F E) ※ (G' ∘F E)
+        -- (F' ※ G') ∘F E 
+        -- 
+        -- where we have proofs of F ≃ F' ∘F E 
+
+  SetSem-extendFunCtx-≃ {α = α} (Nat-I {αs = αs} ⊢F ⊢G) ⊢H = NatTypeSem-∘-≃ ⊢H {β = α} {αs = αs} {⟦F⟧ = SetSem ⊢F} {⟦G⟧ = SetSem ⊢G}
+
+
 
   -- STOPPED HERE 
   -- helper function μ-SetSem-extend... type checks in a reasonable amount of time, but this does not..
   -- -- still slow after giving all implicit arguments in the type of this function 
-  SetSem-extendFunCtx-≃ {Γ} {Φ} {α} {H = H} (μ-I {k = k} {φ = φ} {αs = αs} F ⊢F Gs ⊢Gs) ⊢H = {!!}
-  -- μ-SetSem-extendFunCtx-≃ {k} {Γ = Γ} {F} {Φ = Φ} {α} {H = H} {φ} {αs} ⊢F {Gs} ⊢Gs ⊢H 
-  -- μ-SetSem-extendFunCtx-≃ {k} {Γ = Γ} {F} {Φ = Φ} {α} {H = ?} {φ} {αs} ⊢F {Gs} ⊢Gs ⊢H 
-
-
-
-
-        {-
-    let 
-        ⟦Gs⟧ = SetSemVec ⊢Gs
-        ⟦Gs[H]⟧ = SetSemVec (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))
-        ⟦Gs[H]⟧≃⟦Gs⟧∘extend = SetSemVec-extendFunCtx-≃ ⊢Gs ⊢H 
-        extendH = extendEnvFVar α ⊢H
-        --
-        TF : Functor SetEnvCat ([[ [Sets^ n ,Sets] , [Sets^ n ,Sets] ]])
-        TF = TEnv ⊢F 
-        --
-        fixT∘FEnv : Functor SetEnvCat [Sets^ n ,Sets]
-        fixT∘FEnv = (fixH ∘F TF) ∘F ForgetFVEnv 
-        -- 
-        fixT-extend-※ : ((fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-                      ≃ ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-        fixT-extend-※ = ※-distrib [Sets^ n ,Sets] (Sets^ n) fixT∘FEnv ⟦Gs⟧ extendH
-
-        fixT-extend-≃ :  fixT∘FEnv
-                    ≃ fixT∘FEnv ∘F extendH
-        fixT-extend-≃ = 
-          begin≃
-            (fixH  ∘F TF) ∘F ForgetFVEnv
-            ≃⟨ (fixH  ∘F TF) ≃ˡ (NI.sym (ForgetFVEnv∘extendEnvFVar≃ForgetFVEnv α ⊢H)) ⟩ --  (fixH  ∘F (TEnv ⊢F)) ≃ˡ (NI.sym ...Forget...)
-            (fixH  ∘F TF) ∘F (ForgetFVEnv ∘F extendH)
-            ≃˘⟨ NI.associator extendH ForgetFVEnv (fixH  ∘F TF) ⟩
-            ((fixH  ∘F TF) ∘F ForgetFVEnv) ∘F extendH
-            ≃∎
-
-        ※-extend-≃ : (fixT∘FEnv ※ ⟦Gs[H]⟧)
-                -- ≃ (fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH)
-                ≃ ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-        ※-extend-≃ = 
-          begin≃
-            (fixT∘FEnv ※ ⟦Gs[H]⟧)
-            ≃⟨ NI.refl ※ⁿⁱ ⟦Gs[H]⟧≃⟦Gs⟧∘extend ⟩ -- NI.refl ※ⁿⁱ ..Gs..
-            (fixT∘FEnv ※ (⟦Gs⟧ ∘F extendH))
-            ≃⟨ fixT-extend-≃ ※ⁿⁱ NI.refl ⟩ -- .. ※ⁿⁱ  NI.refl
-            ((fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-            ≃⟨ fixT-extend-※ ⟩ -- distrib 
-            ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-            ≃∎
-
-      in -- {!   !}
-        begin≃
-        (eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))))
-        ≃⟨ ? ⟩ 
-        ((eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec ⊢Gs)) ∘F extendEnvFVar α ⊢H)
-        ≃∎
-         -}
-
-        -- begin≃
-        --   eval ∘F (fixT∘FEnv ※ ⟦Gs[H]⟧)
-        -- ≃⟨ ? ⟩ 
-        -- (eval ∘F (fixT∘FEnv ※ ⟦Gs⟧)) ∘F extendH
-        -- ≃∎
-
-        -- begin≃
-        --   eval ∘F (fixT∘FEnv ※ ⟦Gs[H]⟧)
-        -- ≃⟨ eval ≃ˡ ※-extend-≃ ⟩ 
-        --   eval ∘F ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-        -- ≃⟨ NI.sym-associator extendH  (fixT∘FEnv ※ ⟦Gs⟧) eval ⟩ 
-        -- (eval ∘F (fixT∘FEnv ※ ⟦Gs⟧)) ∘F extendH
-        -- ≃∎
-
-
-    --   begin≃
-    --     eval ∘F (fixT∘FEnv ※ ⟦Gs[H]⟧)
-    --   ≃⟨ ? ⟩ -- recursive proof for Gs 
-    --     eval ∘F (fixT∘FEnv ※ (⟦Gs⟧ ∘F extendH))
-    --   ≃⟨ ? ⟩ -- associate (fixH  ∘F (TEnv ⊢F)) ∘F ForgetFVEnv
-    --          -- to        fixH ∘F ((TEnv ⊢F) ∘F ForgetFVEnv)
-    --  -- below is just a synonym for 
-    --  -- fixH  ∘F ((TEnv ⊢F) ∘F ForgetFVEnv)
-    --     -- eval ∘F (fix∘TFEnv ※ (⟦Gs⟧ ∘F extendH))
-    --     eval ∘F (fixH  ∘F ((TEnv ⊢F) ∘F ForgetFVEnv)            ※ (⟦Gs⟧ ∘F extendH))
-    --   ≃⟨ ? ⟩ -- then we precompose ((TEnv ⊢F) ∘F ForgetFVEnv) with extendH 
-    --     eval ∘F (fixH  ∘F ((TEnv ⊢F ∘F ForgetFVEnv) ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-    --   ≃⟨ ? ⟩ -- then associate 
-    --          -- fixH ∘ (G ∘ extendH) ≃ (fixH ∘ G) ∘ extendH
-    --     eval ∘F ((fixH ∘F ((TEnv ⊢F ∘F ForgetFVEnv)) ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-    --     -- eval ∘F ((fix∘TFEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-    --   ≃⟨ ? ⟩ 
-    --  -- eval ∘F ((fixH ∘F (TEnv ⊢F ∘F ForgetFVEnv)) ∘F extendH  ※ (⟦Gs⟧ ∘F extendH))
-    --     eval ∘F ((fixT∘FEnv ∘F extendH) ※ (⟦Gs⟧ ∘F extendH))
-    --   ≃⟨ ? ⟩ -- F ∘ H ※ G ∘ H  ≃ (F ※ G) ∘F H
-    --     eval ∘F ((fixT∘FEnv ※ ⟦Gs⟧) ∘F extendH)
-    --   ≃⟨ ? ⟩ -- F ∘ H ※ G ∘ H  ≃ (F ※ G) ∘F H
-    --    (eval ∘F (fixT∘FEnv ※ ⟦Gs⟧)) ∘F extendH
-    --   ≃∎
-
-
-
-
--- what is 
-
--- (fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ∘F extendEnvFVar α ⊢H
-
--- eval ∘F
---       ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※
---        SetSemVec
---        (replaceVec-preserves H Gs ⊢H
---         (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
---       ≃
---       (eval ∘F ((fixH ∘F TEnv ⊢F) ∘F ForgetFVEnv ※ SetSemVec ⊢Gs)) ∘F
---       extendEnvFVar α ⊢H
-
-
-
-
-
-
-          -- → TEnv ⊢F ∘F ForgetFVEnv
-          -- ≃ (TEnv ⊢F ∘F ForgetFVEnv) ∘F extendEnvFVar α ⊢H 
---   -- TEnv∘FEnv-extendFunCtx-≃ {α = α} ⊢F ⊢H = begin≃
-
-        -- need proof that TEnv ⊢F ∘F extendH ≃ TEnv ⊢F 
-
-        -- eval 
-
-      -- in {!   !}
-      -- begin≃
-      --   eval ∘F (fixT ※ ⟦Gs[H]⟧)
-      -- ≃⟨ ? ⟩
-      --   eval ∘F (fixT ※ (⟦Gs⟧ ∘F extendH))
-      -- ≃⟨ ? ⟩
-      --  (eval ∘F (fixT ※ ⟦Gs⟧)) ∘F extendH
-      -- ≃∎
-
--- eval ∘F ((fixH ∘F TEnv ⊢F) ※ ⟦Gs[H]⟧)
--- -- eval ≃ˡ (NI.refl ※ⁿⁱ ....)
--- eval ∘F ((fixH ∘F TEnv ⊢F) ※ (⟦Gs[H]⟧ ∘F extendH))
--- -- .. need proof that TEnv ⊢F ∘F extendH ≃ TEnv 
--- eval ∘F ((fixH ∘F TEnv ⊢F ∘F extendH) ※ (⟦Gs[H]⟧ ∘F extendH))
--- -- eval ≃ˡ ※-distrib
--- eval ∘F ((fixH ∘F TEnv ⊢F ※ ⟦Gs[H]⟧) ∘F extendH)
--- -- assoc 
--- (eval ∘F ((fixH ∘F TEnv ⊢F ※ ⟦Gs[H]⟧)) ∘F extendH
-
-
-
--- goal : 
--- eval ∘F
---       (fixH ∘F TEnv ⊢F ※
---        SetSemVec
---        (replaceVec-preserves H Gs ⊢H
---         (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
---       ≃ (eval ∘F (fixH ∘F TEnv ⊢F ※ SetSemVec ⊢Gs)) ∘F extendEnvFVar α ⊢H
-
-
-
-
-
-
-{-
-
-  -- [[F [ α := H ] ]] ρ  ≡   [[F]] ρ [ α := [[H]] ]
-  -- but for vectors of F 
-  SetSemVec-extendFunCtx : ∀ {Fs : Vec TypeExpr k} (⊢Fs : foreach (λ F → Γ ≀ (Φ ,, α) ⊢ F) Fs)
-                          → (⊢H : Γ ≀ Φ ⊢ H)
-                          → SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs))
-                          ≡ SetSemVec ⊢Fs ∘F extendEnvFVar α ⊢H
-  SetSemVec-extendFunCtx {Fs = []} ⊢Fs ⊢H = ≡.refl
-  SetSemVec-extendFunCtx {k = suc n} {α = α} {Fs = F ∷ Fs} (⊢F , ⊢Fs) ⊢H 
-      rewrite SetSem-extendFunCtx ⊢F ⊢H | (SetSemVec-extendFunCtx ⊢Fs ⊢H) = {!     !}
-
--- Cons ∘F ((F ∘F extendH) ※ (Fs ∘F extendH))
--- ≡  (by ※-distr )
--- Cons ∘F ((F ※ Fs) ∘F extendH)
--- ≡  (by assoc)
--- (Cons ∘F (F ※ Fs)) ∘F extendH
-
-
-  -- rewrite (SetSemVec-extendFunCtx ⊢Fs ⊢H) = 
-    -- let --
-    --     C : Functor (Product Sets (Sets^ n)) (Sets^ (suc n))
-    --     C = Sets^cons n
-    --     --
-    --     ⟦F⟧ : Functor SetEnvCat Sets
-    --     ⟦F⟧ = SetSem ⊢F
-    --     --
-    --     ⟦Fs⟧ : Functor SetEnvCat (Sets^ n) 
-    --     ⟦Fs⟧ = SetSemVec ⊢Fs
-    --     --
-    --     extendH : Functor SetEnvCat SetEnvCat
-    --     extendH = extendSetEnv-α α ∘F (idF ※ SetSem ⊢H) 
-    --   in begin
-    --     {! C ∘F ((⟦F⟧ ∘F extendH) ※ (⟦Fs⟧ ∘F extendH))   !}
-    --   ≡⟨ {!   !} ⟩
-    --     {! C ∘F ((⟦F⟧ ※ ⟦Fs⟧) ∘F extendH)  !}
-    --   ≡⟨ {!   !} ⟩
-    --     {! (C ∘F (⟦F⟧ ※ ⟦Fs⟧)) ∘F extendH  !}
-    --   ∎ 
-
-
--- Sets^cons n 
---     ∘F (SetSem (fo-subst-preserves-typing F H ⊢F ⊢H) 
---             ※
---        SetSemVec ⊢Fs ∘F extendEnvFVar α ⊢H)
---       ≡
---       (Sets^cons n ∘F (SetSem ⊢F ※ SetSemVec ⊢Fs)) 
---           ∘F extendSetEnv α ⊢H)
-
--- Cons ∘F ((F ∘F extendH) ※ (Fs ∘F extendH))
--- ≡  (by ※-distr )
--- Cons ∘F ((F ※ Fs) ∘F extendH)
--- ≡  (by assoc)
--- (Cons ∘F (F ※ Fs))
---   ∘F extendH
--- 
--- 
--- 
--- if we want to prove this without resorting to natural isos, then 
--- we need a proof that 
--- ((F ∘F extendH) ※ (Fs ∘F extendH))
--- ≡ ((F ※ Fs) ∘F extendH)
--- 
--- and also associativity ... 
-
-
-
-
-
-
-
-  SetSem-extendFunCtx : ∀ (⊢F : Γ ≀ (Φ ,, α) ⊢ F)
-                        → (⊢H : Γ ≀ Φ ⊢ H)
-                        → SetSem (fo-subst-preserves-typing F H ⊢F ⊢H) 
-                        ≡ SetSem ⊢F ∘F extendEnvFVar α ⊢H
-  SetSem-extendFunCtx 𝟘-I ⊢H = ≡.refl
-  SetSem-extendFunCtx 𝟙-I ⊢H = ≡.refl
-
--- Goal
--- eval ∘F (VarSem-TC φ ※ SetSemVec ⊢Fs)
---             ∘F extendSetEnv-α α ∘F (idF ※ SetSem ⊢H)
---       ≡
---  eval ∘F (VarSem-TC φ ※ SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs)))
-
---  wts 
---   (VarSem-TC φ ※ SetSemVec ⊢Fs) ∘F (extendSetEnv-α α ∘F (idF ※ SetSem ⊢H))
--- ≡ (VarSem-TC φ ※ SetSemVec (replaceVec-preserves H Fs ⊢H (foreach-preserves-subst H Fs ⊢H ⊢Fs)))
-
---   (VarSem-TC φ ※ SetSemVec ⊢Fs) ∘F (extendSetEnv-α α ∘F (idF ※ SetSem ⊢H))
---   ≅
---   (VarSem-TC φ ∘F (extendSetEnv-α α ∘F (idF ※ SetSem ⊢H))) 
---       ※ (SetSemVec ⊢Fs ∘F (extendSetEnv-α α ∘F (idF ※ SetSem ⊢H))) 
-
-
-  SetSem-extendFunCtx (AppT-I Γ∋φ Fs ⊢Fs) ⊢H = {!   !}
-
-
-  SetSem-extendFunCtx (AppF-I Φ∋φ Fs ⊢Fs) ⊢H = {!   !}
-  SetSem-extendFunCtx (+-I ⊢F ⊢G) ⊢H = {!   !}
-  SetSem-extendFunCtx (×-I ⊢F ⊢G) ⊢H = {!   !}
-  SetSem-extendFunCtx (Nat-I ⊢F ⊢G) ⊢H = {!   !}
-  SetSem-extendFunCtx (μ-I F ⊢F Gs ⊢Gs) ⊢H = {!   !} 
-
-  -}
-
+  -- 
+  -- -- solution: had to make TEnv abstract 
+  SetSem-extendFunCtx-≃ {Γ} {Φ} {α} {H = H} (μ-I {k = k} {φ = φ} {αs = αs} F ⊢F Gs ⊢Gs) ⊢H = μ-SetSem-extendFunCtx-≃ {k} {Γ = Γ} {F} {Φ = Φ} {α} {H = H} {φ} {αs} ⊢F {Gs} ⊢Gs ⊢H

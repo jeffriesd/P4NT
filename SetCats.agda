@@ -131,49 +131,6 @@ VecFSpace : ∀ {k : ℕ} → Vec (Set) k → Vec (Set) k → Set
 VecFSpace Xs Ys = foreach2 (λ X Y → X → Y) Xs Ys 
 
 
--- : , ∀ {k : ℕ} {As Bs : Vec (Set l) k} {A B : Set l} → (f : A → B) → VecFSpace As Bs → VecFSpace (A ∷ As) (B ∷ Bs)
--- f , fs = (f , fs) 
-
--- syntax x , y = x , y 
-
-
-
-  -- maybe infix version will be nice..
--- _=Vec=>_ : ∀ {l : Level} {k : ℕ} → Vec (Set l) k → Vec (Set l) k → Set l
--- As =Vec=> Bs = VecFSpace As Bs
-
-{-
--- pointwise equality for vector of functions (VecFSpace)
-pointwise-≈ : ∀ {k} {Xs Ys : Vec (Set) k} → (gs gs' : VecFSpace Xs Ys) → Set 
-pointwise-≈ {Xs = []} {[]} (bigtt) bigtt = ? 
-pointwise-≈ {l} {Xs = X ∷ Xs} {Ys = Y ∷ Ys} (g , gs) (g' , gs') = (Sets [ g ≈ g' ]) ×' pointwise-≈ gs gs' 
-
--- pointwise-≈ is an equivalence relation
-equiv-pointwise-≈ : ∀ {k} {As Bs : Vec (Set) k} → IsEquivalence (pointwise-≈ {k} {As} {Bs})
-equiv-pointwise-≈ = record { refl = λ {gs} → refl gs ; sym = λ {gs} {hs} p → sym gs hs p ; trans = λ {fs} {gs} {hs} fs≈gs gs≈hs → trans fs gs hs fs≈gs gs≈hs } 
-  where refl : ∀ {l} {k} {As Bs : Vec (Set l) k} → (gs : VecFSpace As Bs) → pointwise-≈ gs gs
-        refl {As = []} {[]} (tt) = tt
-        refl {As = A ∷ As} {Bs = B ∷ Bs} (f , fs) = ≡.refl , refl fs
-        sym : ∀ {l} {k} {As Bs : Vec (Set l) k} → (gs hs : VecFSpace As Bs) → pointwise-≈ gs hs → pointwise-≈ hs gs
-        sym {As = []} {[]} (tt) (tt) _ = tt
-        sym {As = A ∷ As} {B ∷ Bs} (g , gs) (h , hs) (g≈h , gs≈hs) = ≡.sym g≈h , sym gs hs gs≈hs 
-        trans : ∀ {l} {k} {As Bs : Vec (Set l) k} → (fs gs hs : VecFSpace As Bs) → pointwise-≈ fs gs → pointwise-≈ gs hs → pointwise-≈ fs hs
-        trans {As = []} {[]} (tt) (tt) (tt) _ _ = tt
-        trans {As = A ∷ As} {B ∷ Bs} (f , fs) (g , gs) (h , hs) (f≈g , fs≈gs) (g≈h , gs≈hs)= (≡.trans f≈g g≈h) , (trans fs gs hs fs≈gs gs≈hs) 
--}
-
-
-
--- -- generic pointwise equality 
--- -- -- if every morphism in fs and gs are equivalent in C, then 
--- -- -- fs and gs are equivalent in C^k
--- gen-pointwise-≈ : ∀ {k} {o l e} {C : Category o l e} → {Xs Ys : Vec (Category.Obj C) k}
---               → (fs gs : foreach2 (Category._⇒_ C) Xs Ys)
---               → Set (lsuc e)
--- gen-pointwise-≈  {C = C} {Vec.[]} {Vec.[]} (tt) (tt) = big⊤
--- gen-pointwise-≈  {C = C} {X ∷ Xs} {Y ∷ Ys} (f , fs) (g , gs) = (f C.≈ g) ×' gen-pointwise-≈ {C = C} fs gs
---   where module C = Category C
-
 
 -------------------------------------------------------
 -- Constant functor
@@ -182,36 +139,19 @@ equiv-pointwise-≈ = record { refl = λ {gs} → refl gs ; sym = λ {gs} {hs} p
 -- NOTE - these are already defined in 
 -- Categories.Functor.Construction.Constant 
 
-open import Categories.Functor.Construction.Constant
+open import Categories.Functor.Construction.Constant public renaming (const to ConstF ; constNat to ConstNat)
 
-ConstF : ∀ {o l e} {o' l' e'} {C : Category o l e}
-           {D : Category o' l' e'} (d : Category.Obj D) → Functor C D
-ConstF {D = D} d = const d
--- record
---   { F₀ = λ _ → d
---   ; F₁ = λ _ → D.id
---   ; identity = λ {A} → DEq.refl
---   ; homomorphism = DEq.sym D.identity²
---   ; F-resp-≈ = λ _ → DEq.refl
---   }
---   where module D = Category D
---         module DEq = Category.Equiv D
-
-ConstNat : ∀ {o l e} {o' l' e'} {C : Category o l e}
-           {D : Category o' l' e'} {d d' : Category.Obj D}
-           → (Category._⇒_ D) d d'
-           → NaturalTransformation (ConstF {C = C} {D} d) (ConstF {C = C} {D} d')
-ConstNat {D = D} {d} {d'} f = constNat f
-    -- record { η = λ c → f 
-    --        ; commute = λ g → begin≈ (f D.∘ D.id) ≈⟨ D.identityʳ ⟩ 
-    --                                 f ≈⟨ D.Equiv.sym D.identityˡ ⟩ 
-    --                                 (D.id D.∘ f) ≈∎ 
-    --        ; sym-commute = λ g → begin≈ (D.id D.∘ f) ≈⟨ D.identityˡ ⟩ 
-    --                                     f ≈⟨ D.Equiv.sym D.identityʳ ⟩ 
-    --                                     (f D.∘ D.id) ≈∎ 
-    --       }
-    --   where module D = Category D 
-    --         open D.HomReasoning renaming (begin_ to begin≈_ ; _∎ to _≈∎)
+-- -- just renaming library version 
+-- ConstF : ∀ {o l e} {o' l' e'} {C : Category o l e}
+--            {D : Category o' l' e'} (d : Category.Obj D) → Functor C D
+-- ConstF {D = D} d = const d
+-- 
+-- -- just renaming library version 
+-- ConstNat : ∀ {o l e} {o' l' e'} {C : Category o l e}
+--            {D : Category o' l' e'} {d d' : Category.Obj D}
+--            → (Category._⇒_ D) d d'
+--            → NaturalTransformation (ConstF {C = C} {D} d) (ConstF {C = C} {D} d')
+-- ConstNat {D = D} {d} {d'} f = constNat f
 
 ∁onstF⇒ConstF∘G : ∀ (C : Category o l e) 
              → {C' : Category o' l' e'} {C'' : Category o'' l'' e''}
@@ -249,12 +189,6 @@ ConstF-∘-≃ C G = record { F⇒G = ∁onstF⇒ConstF∘G C G ; F⇐G = ∁ons
 -- Functor category [Sets,Sets]
 -------------------------------------------------------
 
--- ext-cong-app : ∀ {A B C : Set} → {f h : B → C} {g i : A → B}
---                → (∀ x → f x ≡ h x) → (∀ x → g x ≡ i x)
---                → (∀ x → f (g x) ≡ h (i x))
--- ext-cong-app refl x = refl
-
-
 
 idNaturalTransformation : ∀ {o l e o' l' e'} {C : Category o l e} {D : Category o' l' e'}
                           → (F : Functor C D)
@@ -283,26 +217,6 @@ idNaturalTransformation {C = C} {D} F =
 -- -- the target category D. 
 [[_,_]] : ∀ {o l e o' l' e'} → Category o l e → Category o' l' e' → Category (o ⊔ l ⊔ e ⊔ o' ⊔ l' ⊔ e') (o ⊔ l ⊔ l' ⊔ e') (o ⊔ e') 
 [[ C , D ]] = Functors C D
--- [[ C , D ]] = record
---   { Obj = Functor C D
---   ; _⇒_ = NaturalTransformation
---   -- ; _≈_ = {!   !}
---   ; _≈_ = λ eta1 eta2 → ∀ Xs → NaturalTransformation.η eta1 Xs D.≈ NaturalTransformation.η eta2 Xs
---   ; id = λ {F} → idNaturalTransformation F
---   -- ; id = record { η = λ Xs → idf ; commute = λ f → ≡.refl ; sym-commute = λ f → ≡.refl }
---   ; _∘_ = _∘v_
---   ; assoc = λ Xs → D.assoc
---   ; sym-assoc = λ Xs → D.sym-assoc
---   ; identityˡ = λ Xs → D.identityˡ
---   ; identityʳ = λ Xs → D.identityʳ
---   ; identity² = λ Xs → D.identity²
---   ; equiv = record { refl = λ Xs → D.Equiv.refl 
---                    ; sym = λ η1≈η2 Xs → D.Equiv.sym (η1≈η2 Xs) 
---                    ; trans = λ η1≈η2 η2≈η3 Xs → D.Equiv.trans (η1≈η2 Xs) (η2≈η3 Xs) }
---   ; ∘-resp-≈ = λ ηf≈ηh ηg≈ηi Xs → D.∘-resp-≈ (ηf≈ηh Xs) (ηg≈ηi Xs)
---   } 
---   where module D = Category D 
---         open D.HomReasoning renaming (begin_ to begin≈_ ; _∎ to _≈∎)
 
 
 -- k-ary product category of C, where objects are vectors of C.Obj
@@ -468,37 +382,17 @@ makeIdTuple = idVec Sets
 Sets^ : ℕ → Category (lsuc lzero) lzero lzero
 Sets^ k = Cat^ Sets k
 
-
 Sets^head : ∀ (n : ℕ) → Functor (Sets^ (suc n)) Sets
-Sets^head n = record
-    { F₀ = λ Xs → vhead Xs
-    ; F₁ = λ { {X ∷ Xs} {Y ∷ Ys} (f , fs) x → f x  }
-    ; identity = λ { {X ∷ Xs} → ≡.refl  }
-    ; homomorphism = λ { {X ∷ Xs} {Y ∷ Ys} {Z ∷ Zs} {f , fs} {g , gs} → ≡.refl }
-    ; F-resp-≈ = λ { {X ∷ Xs} {Y ∷ Ys} {f , fs} {g , gs} (f≈g , fs≈gs) → f≈g } 
-    } 
+Sets^head = C^head Sets
 
 Sets^tail : ∀ (n : ℕ) → Functor (Sets^ (suc n)) (Sets^ n)
-Sets^tail n = record
-  { F₀ = λ Xs → vtail Xs
-  ; F₁ = λ { {X ∷ Xs} {Y ∷ Ys} (f , fs) → fs  }
-  ; identity = λ { {X ∷ Xs} → Functor.identity (idF {C = Sets^ n}) } 
-  ; homomorphism = λ { {X ∷ Xs} {Y ∷ Ys} {Z ∷ Zs} {f , fs} {g , gs} → Functor.homomorphism (idF {C = Sets^ n}) }
-  ; F-resp-≈ = λ { {X ∷ Xs} {Y ∷ Ys} {f , fs} {g , gs} (f≈g , fs≈gs) → fs≈gs }
- } 
+Sets^tail = C^tail Sets
 
 Sets^cons : ∀ (n : ℕ) → Functor (Product Sets (Sets^ n)) (Sets^ (suc n))
-Sets^cons n = record
-  { F₀ = λ { (X , Xs) → X ∷ Xs }
-  ; F₁ = λ { (f , fs) → f , fs }
-  ; identity = λ { {A , As} → ≡.refl , Functor.identity (idF {C = Sets^ n}) }
-  ; homomorphism = (λ { {A , As} {B , Bs} {C , Cs} {f , fs} {g , gs} → ≡.refl , (Functor.homomorphism (idF {C = Sets^ n})) }) 
-  ; F-resp-≈ = λ { {A , As} {B , Bs} {f , fs} {g , gs} (f≈g , fs≈gs) → f≈g , fs≈gs  }
-  } 
+Sets^cons = C^cons Sets
 
 Sets^decompose : ∀ (n : ℕ) → Functor (Sets^ (suc n)) (Product Sets (Sets^ n))
-Sets^decompose n = Sets^head n ※ Sets^tail n 
-
+Sets^decompose = C^decompose Sets
 
 {-
 Currently not using universe-polymorphic categories  of sets 

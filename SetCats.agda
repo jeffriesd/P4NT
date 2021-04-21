@@ -122,23 +122,14 @@ SetProd = record
 
 
 -- -- Convert VecFSpace , Sets^ , etc. to use generic VecCat construction 
--- -- function space between two vectors of Sets
--- data VecFSpace {l : Level} : ∀ {k : ℕ} → Vec (Set l) k → Vec (Set l) k → Set l where
---   tt : VecFSpace Vec.[] Vec.[]
---   : , ∀ {k : ℕ} {As Bs : Vec (Set l) k} {A B : Set l} → (f : A → B) → VecFSpace As Bs → VecFSpace (A ∷ As) (B ∷ Bs)
-
 VecFSpace : ∀ {k : ℕ} → Vec (Set) k → Vec (Set) k → Set 
-VecFSpace Xs Ys = foreach2 (λ X Y → X → Y) Xs Ys 
+VecFSpace = foreach2 (λ X Y → X → Y) 
 
-
+ 
 
 -------------------------------------------------------
--- Constant functor
+-- Constant functors
 -------------------------------------------------------
--- 
--- NOTE - these are already defined in 
--- Categories.Functor.Construction.Constant 
-
 open import Categories.Functor.Construction.Constant public renaming (const to ConstF ; constNat to ConstNat)
 
 -- -- just renaming library version 
@@ -167,7 +158,6 @@ open import Categories.Functor.Construction.Constant public renaming (const to C
              → NaturalTransformation {C = C''} {D = C} ((ConstF c) ∘F G) (ConstF c) 
 ∁onstF∘G⇒ConstF C G = record { η = λ _ → Category.id C ; commute = λ f → MR.id-comm-sym C ; sym-commute = λ f → MR.id-comm C } 
 
-
 -- C'' -const-> C 
 -- ≃ 
 -- C'' --> C' -const-> C
@@ -178,37 +168,12 @@ ConstF-∘-≃ : ∀ (C : Category o l e)
              → _≃_ {C = C''} {D = C}  (ConstF c) ((ConstF c) ∘F G)
 ConstF-∘-≃ C G = record { F⇒G = ∁onstF⇒ConstF∘G C G ; F⇐G = ∁onstF∘G⇒ConstF C G ; iso = λ X → record { isoˡ = Category.identity² C ; isoʳ = Category.identity² C } }
 
-
-
-
-
-
 -------------------------------------------------------
 
 -------------------------------------------------------
 -- Functor category [Sets,Sets]
 -------------------------------------------------------
 
-
-idNaturalTransformation : ∀ {o l e o' l' e'} {C : Category o l e} {D : Category o' l' e'}
-                          → (F : Functor C D)
-                          → NaturalTransformation F F 
-idNaturalTransformation {C = C} {D} F = 
-  record { η = λ X → D.id 
-           -- WTS  D.id D.∘ Functor.F₁ F f D.≈ Functor.F₁ F f D.∘ D.id 
-           ; commute = λ {X} {Y} f → begin≈ (D.id D.∘ Functor.F₁ F f) 
-                                            ≈⟨ D.identityˡ ⟩ 
-                                            Functor.F₁ F f
-                                            ≈⟨ D.Equiv.sym D.identityʳ ⟩ 
-                                            (Functor.F₁ F f D.∘ D.id) ≈∎
-           -- WTS Functor.F₁ F f D.∘ D.id D.≈ D.id D.∘ Functor.F₁ F f
-           ; sym-commute = λ {X} {Y} f → begin≈ (Functor.F₁ F f D.∘ D.id) ≈⟨ D.identityʳ ⟩ 
-                                                Functor.F₁ F f ≈⟨ D.Equiv.sym D.identityˡ ⟩  
-                                                (D.id D.∘ Functor.F₁ F f) ≈∎ 
-           } 
-  where module D = Category D
-        open D.HomReasoning renaming (begin_ to begin≈_ ; _∎ to _≈∎)
-{-# WARNING_ON_USAGE idNaturalTransformation "use idnat isntead" #-}
 
 
 -- generic functor category construction 
@@ -335,6 +300,7 @@ module VecCat {o l e : Level} (C : Category o l e) where
     ; ∘-resp-≈ = λ {Xs} {Ys} {Zs} {f h} {g i} f≈h g≈i → composeVecs-resp f≈h g≈i
     }
 
+
   C^ : ℕ → Category o l e
   C^ k = Cat^ k 
 
@@ -368,7 +334,110 @@ module VecCat {o l e : Level} (C : Category o l e) where
   C^decompose : ∀ (n : ℕ) → Functor (C^ (suc n)) (Product C (C^ n))
   C^decompose n = C^head n ※ C^tail n 
 
-open VecCat
+-- open VecCat hiding (idVec)
+
+module VecFunc {o l e  o' l' e' : Level} (C : Category o l e) (D : Category o' l' e') (F : Functor C D) where 
+
+  open VecCat C using (C^)
+  open VecCat D renaming (C^ to D^) 
+
+  module F = Functor F
+  open F using (F₀ ; F₁) 
+
+  Func^-map : ∀ {k} {As Bs : Category.Obj (C^ k)}
+              → C^ k [ As , Bs ]
+              → D^ k [ vmap F₀ As , vmap F₀ Bs ]
+  Func^-map {zero} {[]} {[]} _ = bigtt
+  Func^-map {suc k} {A ∷ As} {B ∷ Bs} (f , fs) =  F₁ f , Func^-map fs
+
+  Func^-identity : ∀ {k} {As : Category.Obj (C^ k)}
+                   → D^ k [ Func^-map (Category.id (C^ k) {A = As}) ≈ Category.id (D^ k) ]
+  Func^-identity {zero} {[]} = bigtt 
+  Func^-identity {suc k} {A ∷ As} = F.identity , Func^-identity 
+
+  Func^-homomorphism : ∀ {k} {Xs Ys Zs : Category.Obj (C^ k)} {fs : C^ k [ Xs , Ys ]} {gs : C^ k [ Ys , Zs ]}
+                      → D^ k [ Func^-map (C^ k [ gs ∘ fs ]) ≈ D^ k [ Func^-map gs ∘ Func^-map fs ] ]
+  Func^-homomorphism {zero} {[]} {[]} {[]} = bigtt 
+  Func^-homomorphism {suc k} {X ∷ Xs} {Y ∷ Ys} {Z ∷ Zs} {f , fs} {g , gs} = F.homomorphism , Func^-homomorphism 
+
+  Func^-F-resp : ∀ {k} {As Bs : Category.Obj (C^ k)} {fs gs : C^ k [ As , Bs ]}
+                → C^ k [ fs ≈ gs ] → D^ k [ Func^-map fs ≈ Func^-map gs ]
+  Func^-F-resp {zero} {[]} {[]} _ = bigtt
+  Func^-F-resp {suc k} {A ∷ As} {B ∷ Bs} {f , fs} {g , gs} (f≈g , fs≈gs) = F.F-resp-≈ f≈g , Func^-F-resp fs≈gs 
+  
+  Func^ : ∀ (k : ℕ) → Functor (C^ k) (D^ k)
+  Func^ k = record
+                { F₀ = vmap F₀ 
+                ; F₁ = Func^-map  
+                ; identity = Func^-identity 
+                ; homomorphism = Func^-homomorphism
+                ; F-resp-≈ = Func^-F-resp
+                } 
+
+-- higher order functor 
+module VecFuncH {o l e  o' l' e' : Level} (C : Category o l e) (D : Category o' l' e') where 
+
+  open VecCat C using (C^)
+  open VecCat D renaming (C^ to D^) 
+  -- module C = Category C
+  module D = Category D 
+  open VecFunc C D 
+
+  HFunc^-map-comp : ∀ {k} {F G : Functor C D} (η : NaturalTransformation F G)
+                    → (Xs : Category.Obj (VecCat.C^ C k))
+                    → VecCat.C^ D k [ Functor.F₀ (VecFunc.Func^ C D F k) Xs , Functor.F₀ (VecFunc.Func^ C D G k) Xs ]
+  HFunc^-map-comp η [] = bigtt
+  HFunc^-map-comp η (X ∷ Xs) = (NaturalTransformation.η η X) , (HFunc^-map-comp η Xs)
+
+  HFunc^-map-commute : ∀ {k} {F : Functor C D} {G : Functor C D}
+                        (η : NaturalTransformation F G)
+                        {Xs Ys : Category.Obj (VecCat.C^ C k)}
+                        (fs : (C^ k) [ Xs , Ys ]) →
+                        (D^ k) [ 
+                          ((D^ k) [ HFunc^-map-comp η Ys ∘ (Functor.F₁ (VecFunc.Func^ C D F k) fs) ])
+                        ≈ 
+                          ((D^ k) [ Functor.F₁ (VecFunc.Func^ C D G k) fs ∘ (HFunc^-map-comp η Xs) ] )
+                        ]
+  HFunc^-map-commute η {[]} {[]} _ = bigtt
+  HFunc^-map-commute η {X ∷ Xs} {Y ∷ Ys} (f , fs) = NaturalTransformation.commute η f  , HFunc^-map-commute η fs
+
+
+
+  HFunc^-map : ∀ {k} {F G : Functor C D} → NaturalTransformation F G 
+               → NaturalTransformation (VecFunc.Func^ C D F k) (VecFunc.Func^ C D G k)
+  HFunc^-map η = ntHelper (record { η = HFunc^-map-comp η ; commute = HFunc^-map-commute η  } )
+
+  HFunc^-identity : ∀ {k} {F : Functor C D} 
+                    → Functors (C^ k) (D^ k) [
+                               HFunc^-map (Category.id (Functors C D) {F})
+                            ≈ Category.id (Functors (C^ k) (D^ k)) ]
+  HFunc^-identity {F = F} {[]} = bigtt
+  HFunc^-identity {F = F} {X ∷ Xs} = D.Equiv.refl , HFunc^-identity
+
+  HFunc^-homomorphism : ∀ {k} {F G H : Functor C D} {f : Functors C D [ F , G ]} {g : Functors C D [ G , H ]}
+                        → Functors (C^ k) (D^ k) [
+                                HFunc^-map (Functors C D [ g ∘ f ])
+                              ≈ Functors (C^ k) (D^ k) [ HFunc^-map g ∘ HFunc^-map f ] ]
+  HFunc^-homomorphism {F = F} {G} {H} {f} {g} {[]} = bigtt
+  HFunc^-homomorphism {F = F} {G} {H} {f} {g} {X ∷ Xs} = D.Equiv.refl , HFunc^-homomorphism
+
+  HFunc^-F-resp : ∀ {k} {F G : Functor C D} {f g : Functors C D [ F , G ]}
+                  → Functors C D [ f ≈ g ]
+                  → Functors (C^ k) (D^ k) [ HFunc^-map f ≈ HFunc^-map g ]
+  HFunc^-F-resp {F = F} {G} {f} {g} f≈g {[]} = bigtt 
+  HFunc^-F-resp {F = F} {G} {f} {g} f≈g {X ∷ Xs} = f≈g , (HFunc^-F-resp f≈g) 
+
+
+  HFunc^ : ∀ (k : ℕ) → Functor (Functors C D) (Functors (C^ k) (D^ k))
+  HFunc^ k = record
+               { F₀ = λ F → Func^ F k   
+               ; F₁ = λ η → HFunc^-map η
+               ; identity = HFunc^-identity  
+               ; homomorphism = HFunc^-homomorphism
+               ; F-resp-≈ =  HFunc^-F-resp 
+               } 
+
+{-
 
 
 -- compositinon of vectors of functions 
@@ -377,7 +446,7 @@ _∘SetVec_ : ∀ {k} → {As Bs Cs : Vec (Set) k} →
 _∘SetVec_ =  _∘Vec_  Sets
 
 makeIdTuple : ∀ {k : ℕ} →  (Xs : Vec Set k) → VecFSpace Xs Xs
-makeIdTuple = idVec Sets
+makeIdTuple = VecCat.idVec Sets
 
 Sets^ : ℕ → Category (lsuc lzero) lzero lzero
 Sets^ k = Cat^ Sets k
@@ -430,97 +499,33 @@ mkIdNatTr' {k} F = idnat
 {-# WARNING_ON_USAGE mkIdNatTr' "use idnat instead" #-}
 
 
--- product of two categories 
-_×Cat_ : ∀ {o l e} {o' l' e'} 
-         → (C : Category o l e) → (D : Category o' l' e')
-         → Category (o ⊔ o') (l ⊔ l') (e ⊔ e')
-C ×Cat D = record
-  { Obj = C.Obj ×' D.Obj
-  ; _⇒_ = λ { (c , d) (c' , d') → (c C.⇒ c') ×' (d D.⇒ d') }
-  ; _≈_ = λ { (f , g) (f' , g') → (f C.≈ f') ×' (g D.≈ g') }
-  ; id = C.id , D.id
-  ; _∘_ = λ { (f , g) (f' , g') → (f C.∘ f') , (g D.∘ g') }
-  ; assoc = C.assoc , D.assoc
-  ; sym-assoc = C.sym-assoc , D.sym-assoc
-  ; identityˡ = C.identityˡ , D.identityˡ
-  ; identityʳ = C.identityʳ , D.identityʳ
-  ; identity² = C.identity² , D.identity²
-  ; equiv = record { refl = C.Equiv.refl , D.Equiv.refl 
-                   ; sym = λ { (f≈f' , g≈g') → C.Equiv.sym f≈f' , D.Equiv.sym g≈g' } 
-                   ; trans = λ { (f≈f' , g≈g') (f'≈f'' , g'≈g'') → (C.Equiv.trans f≈f' f'≈f'') , (D.Equiv.trans g≈g' g'≈g'') } }
-  ; ∘-resp-≈ = λ { (f≈f' , h≈h') (g≈g' , i≈i') → (C.∘-resp-≈ f≈f' g≈g') , (D.∘-resp-≈ h≈h' i≈i') } 
-  } 
-  where module C = Category C
-        module D = Category D
+--------------------------------------------------------------------------------
+
+module ProdRec where 
+    -- not using this for anything currently 
+   
+    -- Functor into terminal Category
+    !One : ∀ {o l e o' l' e'} → (C : Category o l e) → Functor C (One {o'} {l'} {e'})
+    !One C = record
+        { F₀ = λ x → lift tt
+        ; F₁ = λ f → lift tt
+        ; identity = lift tt
+        ; homomorphism = lift tt
+        ; F-resp-≈ = λ _ → lift tt
+        } 
+
+    -- use library definition for n-ary products
+    ProdRec : ∀ {o l e} → ℕ → Category o l e → Category o l (e ⊔ o)
+    ProdRec zero C = One
+    ProdRec (suc n) C = Product C (ProdRec n C)
 
 
--- terminal category
-TCat : Category lzero lzero lzero 
-TCat = record
-  { Obj = ⊤
-  ; _⇒_ = λ t t' → ⊤
-  ; _≈_ = λ f g → ⊤
-  ; id = tt
-  ; _∘_ = λ _ _ → tt
-  ; assoc = tt
-  ; sym-assoc = tt
-  ; identityˡ = tt
-  ; identityʳ = tt
-  ; identity² = tt
-  ; equiv = record { refl = tt
-                   ; sym = λ _ → tt
-                   ; trans = λ _ _ → tt }
-  ; ∘-resp-≈ = λ _ _ → tt
-  } 
+    -- convert Sets^n into a recursively defined n-ary product of categories 
+    Sets^→ProdRec : ∀ n → Functor  (Sets^ n) (ProdRec n Sets)
+    Sets^→ProdRec zero = !One (Sets^ zero)
+    Sets^→ProdRec (suc n) = (idF ⁂ Sets^→ProdRec n) ∘F (Sets^decompose n) 
 
--- terminal category with arbitrary levels
-TCatl : ∀ {o l e} → Category o l e 
-TCatl = record
-  { Obj = big⊤
-  ; _⇒_ = λ t t' → big⊤
-  ; _≈_ = λ f g → big⊤
-  ; id = bigtt
-  ; _∘_ = λ _ _ → bigtt
-  ; assoc = bigtt
-  ; sym-assoc = bigtt
-  ; identityˡ = bigtt
-  ; identityʳ = bigtt
-  ; identity² = bigtt
-  ; equiv = record { refl = bigtt
-                   ; sym = λ _ → bigtt
-                   ; trans = λ _ _ → bigtt }
-  ; ∘-resp-≈ = λ _ _ → bigtt
-  } 
-
-
--- n-ary product of categories using TCat and ×Cat 
-CatProdRec : ∀ {o l e} → ℕ → Category o l e → Category o l (e ⊔ o)
-CatProdRec zero C = TCatl
-CatProdRec (suc n) C = C ×Cat CatProdRec n C 
-
-
--- Functor into terminal Category
-!One : ∀ {o l e o' l' e'} → (C : Category o l e) → Functor C (One {o'} {l'} {e'})
-!One C = record
-  { F₀ = λ x → lift tt
-  ; F₁ = λ f → lift tt
-  ; identity = lift tt
-  ; homomorphism = lift tt
-  ; F-resp-≈ = λ _ → lift tt
-  } 
-
-
--- use library definition for n-ary products
-ProdRec : ∀ {o l e} → ℕ → Category o l e → Category o l (e ⊔ o)
-ProdRec zero C = One
-ProdRec (suc n) C = Product C (ProdRec n C)
-
-
--- convert Sets^n into a recursively defined n-ary product of categories 
-Sets^→ProdRec : ∀ n → Functor  (Sets^ n) (ProdRec n Sets)
-Sets^→ProdRec zero = !One (Sets^ zero)
-Sets^→ProdRec (suc n) = (idF ⁂ Sets^→ProdRec n) ∘F (Sets^decompose n) 
-
+--------------------------------------------------------------------------------
 
 module 0Functors {o l e : Level} (C : Category o l e) where 
     open VecCat
@@ -549,6 +554,8 @@ module 0Functors {o l e : Level} (C : Category o l e) where
     0Functors⇒C = evalF (Cat^ C zero) C []
 
 open 0Functors 
+
+---------------------------------------------------------------------------
 
 -- 0Functors constructs for Sets 
 to0Functors : ∀ {k} → Vec Set k → Vec (Functor (Sets^ zero) Sets) k
@@ -612,6 +619,9 @@ open import Categories.Category.Product.Properties using (※-distrib)
 ×Set-compose-distr-sym F G H =  NI.NaturalIsomorphism.F⇐G (×Set-compose-distr-≃ F G H)  
 
 
+
+
+---------------------------------------------------------------------------
 
 
 -- pointwise-het-id asserts that a morphism in Sets^ k is fundamentally 
@@ -715,3 +725,56 @@ module HetFunctorialityFunctors {k : ℕ} {Xs Ys : Vec Set k}
 
 
 
+
+
+private 
+    module foreach-functors {o l e : Level} (C : Category o l e) where 
+
+        private
+            variable
+                a r : Level
+                A : Set a
+
+        open import Utils using (foreach)
+        module C = Category C 
+
+        -- foreach-map : ∀ {k} (P : Category.Obj C → Set) {xs ys : Category.Obj (Cat^ C k)} → (fs : Cat^ C k [ xs , ys ]) → foreach P xs → foreach P ys
+        -- foreach-map P {[]} {[]} _ _ = bigtt
+        -- foreach-map P {x ∷ xs} {y ∷ ys} (f , fs) (p , ps) = {!!} , {!!} 
+
+
+        -- foreachF : ∀ {k : ℕ} → (P : Category.Obj C → Set) → Functor (Cat^ C k) Sets 
+        -- foreachF P = record
+        --              { F₀ = foreach P
+        --              ; F₁ = {!foreach-map P!}
+        --              ; identity = {!!}
+        --              ; homomorphism = {!!}
+        --              ; F-resp-≈ = {!!}
+        --              } 
+       
+        open VecCat C hiding (Cat^)
+    
+
+        foreach-map : ∀ {k} (P : Functor C Sets) {A B : Category.Obj (Cat^ C k)}
+                      → Cat^ C k [ A , B ] → foreach (Functor.F₀ P) A →  foreach (Functor.F₀ P) B 
+        foreach-map P {[]} {[]} _ btt = btt
+        foreach-map P {x ∷ xs} {y ∷ ys} (f , fs) (p , ps) = Functor.F₁ P f p , foreach-map P fs ps 
+
+        foreach-identity : ∀ {k} (P : Functor C Sets) (xs : Category.Obj (Cat^ C k)) →
+                        Sets [ foreach-map P (Category.id (Cat^ C k) {xs}) ≈ Category.id Sets ]
+        foreach-identity P [] = ≡.refl
+        foreach-identity {k = suc k} P (x ∷ xs) {Px , Pxs} = begin (Functor.F₁ P C.id Px) , foreach-map P (idVec xs) Pxs
+                                                                    ≡⟨ ×'-cong (Functor.identity P) (foreach-identity P xs {Pxs}) ⟩
+                                                                    Px , Pxs ∎ 
+
+
+        foreachF : ∀ {k : ℕ} → (P : Functor C Sets) → Functor (Cat^ C k) Sets 
+        foreachF P = record
+                       { F₀ = foreach (Functor.F₀ P) 
+                       ; F₁ = foreach-map P
+                       ; identity = λ {xs} → foreach-identity P xs  
+                       ; homomorphism = {! foreach-homo !}
+                       ; F-resp-≈ = {!!}
+                       } 
+
+-}

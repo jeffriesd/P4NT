@@ -688,6 +688,7 @@ idRTFunctor = record
 module PolynomialRels where 
 
     open import Categories.Object.Terminal 
+    open import Categories.Object.Initial
 
     -- first we have the actual relations (subsets) for initial and terminal relation 
     Rel0⊤ : REL0 ⊤ ⊤
@@ -705,7 +706,7 @@ module PolynomialRels where
     RelTerminal : Terminal Rels
     RelTerminal = record { ⊤ = Rel⊤ ; ⊤-is-terminal = Rel⊤-IsTerminal } 
 
-    -- there are two possible choices here 
+    -- there are two possible choices to define initial relation 
     -- either the constantly false relation 
     Rel⊥0 : REL0 ⊥ ⊥ 
     Rel⊥0 _ _ = ⊥
@@ -714,13 +715,18 @@ module PolynomialRels where
     Rel⊥0-elim : REL0 ⊥ ⊥ 
     Rel⊥0-elim () 
 
+
     Rel⊥ : RelObj 
     Rel⊥ = R[ ⊥ , ⊥ , Rel⊥0 ] 
 
     Rel⊥! : ∀ {R : RelObj} → RelMorph Rel⊥ R
     Rel⊥! = RM[ exFalso , exFalso , (λ()) ] 
     
+    Rel⊥-IsInitial : IsInitial Rels Rel⊥
+    Rel⊥-IsInitial = record { ! = Rel⊥! ; !-unique = λ _ → (λ { {()} }) , (λ { {()} })  }
 
+    RelInitial : Initial Rels
+    RelInitial = record { ⊥ = Rel⊥ ; ⊥-is-initial = Rel⊥-IsInitial } 
 
     -- product of REL0 objects
     _×Rel0_ : ∀ {A B A' B' : Set} → REL0 A B → REL0 A' B' → REL0 (A ×' A') (B ×' B')
@@ -729,8 +735,6 @@ module PolynomialRels where
     -- sum of RelObj objects 
     _×Rel_ : RelObj → RelObj → RelObj
     R ×Rel S = R[ (fst R ×' fst S) , (snd R ×' snd S) , (rel R ×Rel0 rel S) ] 
-
-
 
     -- sum of REL0 objects
     _+Rel0_ : ∀ {A B A' B' : Set} → REL0 A B → REL0 A' B' → REL0 (A ⊎ A') (B ⊎ B')
@@ -741,14 +745,11 @@ module PolynomialRels where
     {-# CATCHALL #-}
     (R0 +Rel0 S0) _ _ = ⊥
 
-
     -- sum of RelObj objects 
     _+Rel_ : RelObj → RelObj → RelObj
     R +Rel S = R[ (fst R ⊎ fst S) , (snd R ⊎ snd S) , (rel R +Rel0 rel S) ] 
 
-
-    -- TODO need actions on morphisms as well 
-
+    -- action of product functor on morphisms 
     _×RelM_ : ∀ {R S R' S' : RelObj} → RelMorph R S → RelMorph R' S' → RelMorph (R ×Rel R') (S ×Rel S')
     _×RelM_ {R} {S} {R'} {S'} RM[ f , g , fg-preserves ] RM[ f' , g' , f'g'-preserves ]  =
         RM[ funcprod (f , f')  , funcprod (g , g') , prod-preserves ] 
@@ -760,14 +761,12 @@ module PolynomialRels where
                               f'g'p :  (rel R' x' y') →  (rel S' (f' x') (g' y'))
                               f'g'p = f'g'-preserves {x'} {y'} 
 
-                              -- -prod :  (rel R x y) ×'  (rel R' x' y') 
-                              -- -prod = ∧- p
-
                               Sfxgy :  (rel S (f x) (g y))
                               Sfxgy = fgp (proj₁ p)
                               S'f'x'g'y' :  (rel S' (f' x') (g' y'))
                               S'f'x'g'y' = f'g'p (proj₂ p)
 
+    -- action of sum functor on morphisms 
     _+RelM_ : ∀ {R S R' S' : RelObj} → RelMorph R S → RelMorph R' S' → RelMorph (R +Rel R') (S +Rel S')
     _+RelM_ {R} {S} {R'} {S'} RM[ f , g , fg-preserves ] RM[ f' , g' , f'g'-preserves ]  =
                 RM[ Data.Sum.map f f' , Data.Sum.map g g' , (λ { {x} {y} → sum-preserves {x} {y} }) ] 

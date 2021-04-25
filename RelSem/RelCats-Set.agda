@@ -1,4 +1,4 @@
-{-# OPTIONS --allow-unsolved-metas --rewriting --confluence-check #-}
+{-# OPTIONS --allow-unsolved-metas --rewriting --confluence-check --irrelevant-projections #-}
 open import Agda.Builtin.Equality.Rewrite
 
 
@@ -31,15 +31,18 @@ module RelSem.RelCats-Set where
 record IRREL0 (A B : Set) : Set₁ where 
   field 
     R : A → B → Set
-    irrel : ∀ {x : A} {y : B} → (p p' : R x y) → p ≡ p'
-
-
--- want to be able to do
--- R : IRREL0 A B
---
--- R x y : Set 
+    irrelevant : ∀ {x : A} {y : B} → (p p' : R x y) → p ≡ p'
 
 -- proof relevant relation 
+-- REL0 : Set → Set → Set₁ 
+-- REL0 = IRREL0
+  
+-- _,_∈_ : ∀ {A B : Set} → A → B → REL0 A B → Set
+-- x , y ∈ R = IRREL0.R R x y 
+
+-- irrel : ∀ {A B : Set} → (R : IRREL0 A B) → ∀ {x : A} {y : B} → (p p' : x , y ∈ R ) → p ≡ p'
+-- irrel R = IRREL0.irrelevant R 
+
 REL0 : Set → Set → Set₁ 
 REL0 A B = A → B → Set
   
@@ -72,7 +75,7 @@ open RelObj
 
 preservesRel : ∀ {A B A' B' : Set} → (R : REL0 A B) → (R' : REL0 A' B')
                → (f : A → A') → (g : B → B') → Set 
-preservesRel R R' f g = ∀ {x y} → R x y → R' (f x) (g y)
+preservesRel R R' f g = ∀ {x y} → x , y ∈ R → (f x) , (g y) ∈ R'
 
 
 preservesRel-comp : ∀ {A B A' B' A'' B'' : Set} → (R : REL0 A B) → (R' : REL0 A' B') → (R'' : REL0 A'' B'')
@@ -86,7 +89,6 @@ preservesRel-comp R R' R'' f g f' g' pfg pf'g' = pf'g' ∘' pfg
 preservesRelObj : ∀ (R R' : RelObj)
                → (f : RelObj.fst R → RelObj.fst R') → (g : RelObj.snd R → RelObj.snd R') → Set 
 preservesRelObj R R' f g = preservesRel (RelObj.rel R) (RelObj.rel R') f g 
--- ∀ {x y} →  (RelObj.rel R x y) →  (RelObj.rel R' (f x) (g y))
 
 preservesRelObj-comp : ∀ (R R' R'' : RelObj)
                → (f : fst R → fst R') → (g : snd R → snd R') → (f' : fst R' → fst R'') → (g' : snd R' → snd R'') 
@@ -94,8 +96,6 @@ preservesRelObj-comp : ∀ (R R' R'' : RelObj)
                → preservesRelObj R' R'' f' g'
                → preservesRelObj R R'' (f' ∘' f) (g' ∘' g)
 preservesRelObj-comp R R' R'' f g f' g' pfg pf'g' = pf'g' ∘' pfg  
-
-
 
 
 record RelMorph (R S : RelObj) : Set (lsuc lzero) where
@@ -361,15 +361,20 @@ embedRT = record
             ; F-resp-≈ = λ f≈g → proj₁ f≈g  , proj₂ f≈g
             } 
 
+{- 
+-- was using this version of RelSet, but it requires additional assumptions (about relations being irrelevant)
+-- but even with these added assumptions, it is tedious 
 
-
+   
 RelSet : ∀ (R : RelObj) → Set
 RelSet R[ X , Y , R* ] = Σ[ x ∈ X ] (Σ[ y ∈ Y ] (x , y ∈ R* ))
 
 RelSet-map : ∀ {R S : RelObj} → RelMorph R S → RelSet R → RelSet S
 RelSet-map RM[ ffst , fsnd , preserves ] (x , y , rxy) = ffst x , fsnd y , preserves rxy
 
-RelSet-cong : ∀ (R : RelObj) (x x' : fst R) (y y' : snd R) → (x ≡ x') → (y ≡ y') → (p : x , y ∈ (rel R)) → (p' : x' , y' ∈ (rel R)) → (x , (y , p)) ≡ (x' , (y' , p'))
+RelSet-cong : ∀ (R : RelObj) (x x' : fst R) (y y' : snd R) → (x ≡ x') → (y ≡ y')
+              → (p : x , y ∈ (rel R)) → (p' : x' , y' ∈ (rel R))
+              → (x , (y , p)) ≡ (x' , (y' , p'))
 RelSet-cong R x .x y .y ≡.refl ≡.refl p p' = ≡.cong (_,_ x) (≡.cong (_,_ y) {!    !})
 -- (≡.cong (_,_ y) (irrel (rel R)  p p'))
 
@@ -401,9 +406,51 @@ RelSetF = record
             ; F₁ = RelSet-map
             ; identity = ≡.refl
             ; homomorphism = ≡.refl
-            ; F-resp-≈ = λ { {A = R} {B = S} {f = f} {g = g} (f₁≈g₁ , f₂≈g₂) {x , y , rxy} → RelSet-resp R S f g f₁≈g₁ f₂≈g₂ x y rxy } 
-            } 
+            ; F-resp-≈ = λ { {A = R} {B = S} {f = f} {g = g} (f₁≈g₁ , f₂≈g₂) {x , y , rxy} → RelSet-resp R S f g f₁≈g₁ f₂≈g₂ x y } 
+            }
+            
 
+-- function from the relation seen as an object to the underlying product 
+incl : ∀ (R : RelObj) → RelSet R → RelUProd R
+incl R (x , y , _) = x , y
+
+inclNat : NaturalTransformation RelSetF RelUProdF 
+inclNat = ntHelper (record { η = incl ; commute = λ f → ≡.refl }) 
+-}
+
+
+
+-- this version of RelSet makes the irrelevance of
+-- relatedness proof explicit. 
+record RelSet (R : RelObj) : Set where
+  constructor RI[_,_,_]
+  field
+    x : fst R
+    y : snd R 
+    -- make proof of relatedness irrelevant here.
+    -- we care that x and y are related when constructing
+    -- RelSetirr but we don't care about p for equality 
+    .p : x , y ∈ rel R 
+
+
+-- note . preceding p and p' for irrelevance 
+RelSet-eq : ∀ {R : RelObj} {x x' : fst R} {y y' : snd R} .{p : x , y ∈ rel R} .{p' : x' , y' ∈ rel R} → x ≡ x' → y ≡ y' → RI[ x , y , p ] ≡ RI[ x' , y' , p' ] 
+-- RelSet-eq : ∀ {R : RelObj} {x x' : fst R} {y y' : snd R} → x ≡ x' → y ≡ y' → RI[ x , y , _ ] ≡ RI[ x' , y' , _ ] 
+RelSet-eq ≡.refl ≡.refl = ≡.refl
+
+RelSet-map : ∀ {R S : RelObj} → Rels [ R , S ] → Sets [ RelSet R , RelSet S ]
+RelSet-map {R} {S} RM[ f1 , f2 , p ] Ri = RI[ f1 (RelSet.x Ri) , f2 (RelSet.y Ri) , p (RelSet.p Ri) ]
+
+
+
+RelSetF : Functor Rels Sets
+RelSetF = record
+             { F₀ = RelSet
+             ; F₁ = RelSet-map 
+             ; identity = ≡.refl
+             ; homomorphism = ≡.refl
+             ; F-resp-≈ = λ { (f1≈g1 , f2≈g2) {RI[ x , y , p ]} → RelSet-eq (f1≈g1 {x}) (f2≈g2 {y})  } 
+             } 
 
 -- get the underlying product  of a relation 
 RelUProd : ∀ (R : RelObj) → Set
@@ -424,10 +471,11 @@ RelUProd⇒π₁ = ntHelper (record { η = λ R → proj₁ ;  commute = λ f �
 RelUProd⇒π₂ : NaturalTransformation RelUProdF π₂
 RelUProd⇒π₂ = ntHelper (record { η = λ R → proj₂ ;  commute = λ f → ≡.refl }) 
 
--- function from the relation seen as an object to the underlying product 
+-- inclusion of related elements into underlying product 
 incl : ∀ (R : RelObj) → RelSet R → RelUProd R
-incl R (x , y , _) = x , y
+incl R RI[ x , y , _ ] = x , y
 
+-- this inclusion is natural in R 
 inclNat : NaturalTransformation RelSetF RelUProdF 
 inclNat = ntHelper (record { η = incl ; commute = λ f → ≡.refl }) 
 
@@ -1065,3 +1113,4 @@ toHRT {k} = record
 
 
 -}
+

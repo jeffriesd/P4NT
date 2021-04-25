@@ -6,7 +6,6 @@ open import Categories.Category
 open import Categories.Functor using (Functor ; Endofunctor ; _∘F_ )
 open import Categories.NaturalTransformation renaming (_∘ᵥ_ to _∘v_ ; id to idnat)
 open import Relation.Binary.PropositionalEquality as ≡ using (_≡_)
-open ≡.≡-Reasoning
 open import Level renaming (zero to lzero ; suc to lsuc)
 open import Data.Unit using (⊤ ; tt )
 open import Data.Empty using (⊥) 
@@ -15,8 +14,9 @@ open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
 open import Relation.Binary using (IsEquivalence ; Reflexive ; Transitive ; Symmetric)
 
 open import Data.Sum using (_⊎_ ; inj₁ ; inj₂)
-open import Data.Vec using (Vec ; [] ; _∷_; replicate ; zipWith) renaming (map to vmap)
+open import Data.Vec using (Vec ; [] ; _∷_) renaming (map to vmap)
 open import Data.Product renaming (_×_ to _×'_ ; map to ×'-map)
+open import Data.Product.Properties using (,-injectiveˡ ; ,-injectiveʳ) 
 open import Data.Bool
 open import SetCats 
 open VecCat 
@@ -216,216 +216,24 @@ import Relation.Binary.HeterogeneousEquality as Het
 
 
 
-relPreservesEq : ∀ {A B A' B' : Set} → (R : REL0 A B) → (S : REL0 A' B')
-                 → A ≡ A' → B ≡ B' → R Het.≅ S
-                 → (f : A → A') → (g : B → B')
-                 → preservesRel R S f g
-                 → ∀ {x y} → R x y → S (f x) (g y)
-relPreservesEq R .R ≡.refl ≡.refl Het.refl f g x,y∈R = x,y∈R
-
-relObjPreservesEq : ∀ (R S R' S' : RelObj) → (m : RelMorph R S)
-                    → (f1 : fst R' → fst S') → (f2 : snd R' → snd S')
-                    → fst R ≡ fst R' → fst S ≡ fst S'
-                    → snd R ≡ snd R' → snd S ≡ snd S'
-                    → rel R Het.≅ rel R'
-                    → rel S Het.≅ rel S' 
-                    → mfst m Het.≅ f1 → msnd m Het.≅ f2
-                    → RelMorph R' S' 
-relObjPreservesEq R S R' S' m f1 f2 ≡.refl ≡.refl ≡.refl ≡.refl Het.refl Het.refl Het.refl Het.refl = m
-
-
-relObjPreservesEq-ext : ∀ (R S R' S' : RelObj) → (m : RelMorph R S)
-                    → (f1 : fst R' → fst S') → (f2 : snd R' → snd S')
-                    → fst R ≡ fst R' → fst S ≡ fst S'
-                    → snd R ≡ snd R' → snd S ≡ snd S'
-                    → rel R Het.≅ rel R'
-                    → rel S Het.≅ rel S' 
-                    → (∀ {x y} → x Het.≅ y → mfst m x Het.≅ f1 y)
-                    → (∀ {x y} → x Het.≅ y → msnd m x Het.≅ f2 y)
-                    → RelMorph R' S' 
-relObjPreservesEq-ext R S R' S' m f1 f2 ≡.refl ≡.refl ≡.refl ≡.refl Het.refl Het.refl e1 e2 =
-  let
-      h : ∀ {x : fst R} {y : snd R} → x , y ∈ rel R → (mfst m x , msnd m y ∈ rel S)
-      h = RelMorph.preserves m 
-    
-      -- preservesRS : preservesRelObj R S f1 f2
-      preservesRS : ∀ {x : fst R} {y : snd R} → x , y ∈ rel R → (f1 x , f2 y ∈ rel S) 
-      preservesRS {x} {y} xy∈R = ≡.subst₂ (λ z w → z , w ∈ rel S) (Het.≅-to-≡ (e1 {x} {x} Het.refl)) (Het.≅-to-≡ (e2 {y} {y} Het.refl)) (h xy∈R) 
-    in RM[ f1 , f2 , preservesRS ] 
-
-relObjPreservesEq-ext-p : ∀ (R S R' S' : RelObj) → (m : RelMorph R S)
-                    → (f1 : fst R' → fst S') → (f2 : snd R' → snd S')
-                    → fst R ≡ fst R' → fst S ≡ fst S'
-                    → snd R ≡ snd R' → snd S ≡ snd S'
-                    → rel R Het.≅ rel R'
-                    → rel S Het.≅ rel S' 
-                    → (∀ {x y} → x Het.≅ y → mfst m x Het.≅ f1 y)
-                    → (∀ {x y} → x Het.≅ y → msnd m x Het.≅ f2 y)
-                    → preservesRelObj R' S' f1 f2
-relObjPreservesEq-ext-p R S R' S' m f1 f2 ≡.refl ≡.refl ≡.refl ≡.refl Het.refl Het.refl e1 e2 = 
-  let
-      h : ∀ {x : fst R} {y : snd R} → x , y ∈ rel R → (mfst m x , msnd m y ∈ rel S)
-      h = RelMorph.preserves m 
-    
-      -- preservesRS : preservesRelObj R S f1 f2
-      preservesRS : ∀ {x : fst R} {y : snd R} → x , y ∈ rel R → (f1 x , f2 y ∈ rel S) 
-      preservesRS {x} {y} xy∈R = ≡.subst₂ (λ z w → z , w ∈ rel S) (Het.≅-to-≡ (e1 {x} {x} Het.refl)) (Het.≅-to-≡ (e2 {y} {y} Het.refl)) (h xy∈R) 
-    in preservesRS 
-
-
--- third component of RTObj -- functor of relations + properties 
-record RTObj* {k : ℕ} (F1 F2 : Functor (Sets^ k) Sets) : Set₁ where 
-  open RelObj
-  module F1 = Functor F1
-  module F2 = Functor F2
-  field 
-    F* : Functor (Rels^ k) Rels 
-
-    F*-preserves-1 : ∀ (Rs : Vec RelObj k) → fst (Functor.F₀ F* Rs) ≡ F1.₀ (vecfst Rs)
-    F*-preserves-2 : ∀ (Rs : Vec RelObj k) → snd (Functor.F₀ F* Rs) ≡ F2.₀ (vecsnd Rs)
-
-    F*-preserves-m1 : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ])
-                      -- have to use x y , x ≅ y because LHS and RHS don't have definitionally equal types 
-                      →  ∀ {x y} → x Het.≅ y → mfst (Functor.F₁ F* ms) x Het.≅ Functor.F₁ F1 (vecmfst ms) y
-
-    F*-preserves-m2 : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ])
-                      -- have to use x y , x ≅ y because LHS and RHS don't have definitionally equal types 
-                      →  ∀ {x y} → x Het.≅ y → msnd (Functor.F₁ F* ms) x Het.≅ Functor.F₁ F2 (vecmsnd ms) y
-
-  -- abstract 
-
--- Goal: RTObj*.F*Rel (RTObj.F* Rt) Ss
---       (Functor.F₁ Rt.F1 (vecmfst fs) x)
---       (Functor.F₁ Rt.F1 (vecmsnd fs) y)
--- Have: RTObj*.F*Rel (RTObj.F* Rt) Rs x y
-
-
-
-  F*Rel : ∀ (Rs : Vec RelObj k) → REL0 (F1.₀ (vecfst Rs)) (F2.₀ (vecsnd Rs))
-  F*Rel Rs = ≡.subst₂ REL0 (F*-preserves-1 Rs) ( (F*-preserves-2 Rs) ) (rel (Functor.F₀ F* Rs)) 
-
-  F*RelObj : ∀ (Rs : Vec RelObj k) → RelObj 
-  F*RelObj Rs = R[ F1.₀ (vecfst Rs) , F2.₀ (vecsnd Rs) , F*Rel Rs ]
-
-  F*Rel-eq : ∀ (Rs : Vec RelObj k) → F*Rel Rs Het.≅ rel (Functor.F₀ F* Rs) 
-  F*Rel-eq Rs = subst₂-reduce REL0 (F*-preserves-1 Rs) (F*-preserves-2 Rs) (rel (Functor.F₀ F* Rs)) 
-
-  -- TODO combine this with F*Rel-map 
-  F*RelObj-preserves : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ]) → preservesRelObj (F*RelObj Rs) (F*RelObj Ss) ( (F1.₁ (vecmfst ms))) ( (F2.₁ (vecmsnd ms))) 
-  F*RelObj-preserves {Rs} {Ss} ms = relObjPreservesEq-ext-p F*Rs F*Ss (F*RelObj Rs) (F*RelObj Ss) F*ms F1ms F2ms p1Rs p1Ss p2Rs p2Ss p*Rs p*Ss pm1 pm2 
-    where
-          F*ms = Functor.F₁ F* ms ; F1ms = F1.₁ (vecmfst ms) ; F2ms = F2.₁ (vecmsnd ms)
-          F*Rs = Functor.F₀ F* Rs ; F*Ss = Functor.F₀ F* Ss
-          F1Rs = F1.₀ (vecfst Rs) ; F2Rs = F2.₀ (vecsnd Rs)
-          F1Ss = F1.₀ (vecfst Ss) ; F2Ss = F2.₀ (vecsnd Ss)
-
-          p1Rs : fst F*Rs ≡ F1Rs ; p1Rs = F*-preserves-1 Rs
-          p2Rs : snd F*Rs ≡ F2Rs ; p2Rs = F*-preserves-2 Rs 
-          --
-          p1Ss : fst F*Ss ≡ F1Ss ; p1Ss = F*-preserves-1 Ss 
-          p2Ss : snd F*Ss ≡ F2Ss ; p2Ss = F*-preserves-2 Ss 
-          --
-          p*Rs : rel F*Rs Het.≅ rel (F*RelObj Rs) ; p*Rs = Het.sym (F*Rel-eq Rs)
-          p*Ss : rel F*Ss Het.≅ rel (F*RelObj Ss) ; p*Ss = Het.sym (F*Rel-eq Ss)
-          --
-          pm1 : ∀ {x y} → x Het.≅ y → mfst F*ms x Het.≅ F1ms y 
-          pm1 = F*-preserves-m1 ms
-          pm2 : ∀ {x y} → x Het.≅ y → msnd F*ms x Het.≅ F2ms y
-          pm2 = F*-preserves-m2 ms
-
-
-  F*Rel-map : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ]) → Rels [ F*RelObj Rs , F*RelObj Ss ]
-  F*Rel-map {Rs} {Ss} ms = relObjPreservesEq-ext F*Rs F*Ss (F*RelObj Rs) (F*RelObj Ss) F*ms F1ms F2ms p1Rs p1Ss p2Rs p2Ss p*Rs p*Ss pm1 pm2 
-    where
-          F*ms = Functor.F₁ F* ms ; F1ms = F1.₁ (vecmfst ms) ; F2ms = F2.₁ (vecmsnd ms)
-          F*Rs = Functor.F₀ F* Rs ; F*Ss = Functor.F₀ F* Ss
-          F1Rs = F1.₀ (vecfst Rs) ; F2Rs = F2.₀ (vecsnd Rs)
-          F1Ss = F1.₀ (vecfst Ss) ; F2Ss = F2.₀ (vecsnd Ss)
-
-          p1Rs : fst F*Rs ≡ F1Rs ; p1Rs = F*-preserves-1 Rs
-          p2Rs : snd F*Rs ≡ F2Rs ; p2Rs = F*-preserves-2 Rs 
-          --
-          p1Ss : fst F*Ss ≡ F1Ss ; p1Ss = F*-preserves-1 Ss 
-          p2Ss : snd F*Ss ≡ F2Ss ; p2Ss = F*-preserves-2 Ss 
-          --
-          p*Rs : rel F*Rs Het.≅ rel (F*RelObj Rs) ; p*Rs = Het.sym (F*Rel-eq Rs)
-          p*Ss : rel F*Ss Het.≅ rel (F*RelObj Ss) ; p*Ss = Het.sym (F*Rel-eq Ss)
-          --
-          pm1 : ∀ {x y} → x Het.≅ y → mfst F*ms x Het.≅ F1ms y 
-          pm1 = F*-preserves-m1 ms
-          pm2 : ∀ {x y} → x Het.≅ y → msnd F*ms x Het.≅ F2ms y
-          pm2 = F*-preserves-m2 ms
-
-  -- try to construct a functor from F*RelObj and F*Rel-map 
-  F*Functor : Functor (Rels^ k) Rels 
-  F*Functor = record
-                { F₀ = F*RelObj
-                ; F₁ = F*Rel-map
-                ; identity = {!!} , {!!}
-                ; homomorphism = {!!}
-                ; F-resp-≈ = {!!}
-                } 
-
-  -- instead of taking F* as a field of RTObj*,
-  -- and having a bunch of properties (that are tedious to prove)
-  --
-  -- what if we take components of F* (F₀, F₁ , etc.)
-  -- that are maybe easier to reason about
-  -- and then
-  -- construct a functor from these pieces ?? 
-
-  -- like rather than taking some arbitrary functor from [Rels^ k ,Rels]
-  -- and asserting its components must satisfy XYZ,
-  -- just ask directly for components satisfying XYZ...
-  -- and then construct a functor! 
-
-
-
--- vecmfst {k} {Rs = Rs} {S } ms = Functor.F₁ (π₁Vec k) ms 
--- π₁Vec = Func^ Rels Sets π₁ 
--- p1 : Sets [ Functor.F₁ F (Functor.F₁ (Func^ C D g) ((C^ k) [ gs ∘ fs ] ))
---             ≈ μH1-map (vecmfst gs) ∘' (μH1-map (vecmfst fs)) ]
-
-
-
-
-
- 
-
-
-
-record RTObj (k : ℕ) : Set (lsuc lzero) where 
-  constructor RT[_,_,_]
-  open RelObj
-  field 
-    F1 : Functor (Sets^ k) Sets
-    F2 : Functor (Sets^ k) Sets
-    F* : RTObj* F1 F2 
-    -- Functor (Rels^ k) Rels 
-
-  -- aliases for fields of RTObj* 
-  F*₀ : Vec RelObj k → RelObj 
-  F*₀ = Functor.F₀ (RTObj*.F* F*)
-
-  F*-preserves-1 : ∀ (Rs : Vec RelObj k) → fst (F*₀ Rs) ≡ Functor.F₀ F1 (vecfst Rs)
-  F*-preserves-1 = RTObj*.F*-preserves-1 F*
-
-  F*-preserves-2 : ∀ (Rs : Vec RelObj k) → snd (F*₀ Rs) ≡ Functor.F₀ F2 (vecsnd Rs)
-  F*-preserves-2 = RTObj*.F*-preserves-2 F*
-
-
-
-
+-- instead of asking for a functor of type [Rels^ k ,Rels] and then asserting
+-- a bunch of (non-definitional) equalities, we can just ask for the minimal
+-- pieces needed to define such a functor, and then define the functor
+-- so that these equalities hold definitionally 
 record RTObj*Components {k : ℕ} (F1 F2 : Functor (Sets^ k) Sets) : Set₁ where 
   open RelObj
   module F1 = Functor F1
   module F2 = Functor F2
   field 
+    -- all we need is the action on objects (relations) 
     F*Rel : ∀ (Rs : Vec RelObj k) → REL0 (F1.₀ (vecfst Rs)) (F2.₀ (vecsnd Rs))
+    -- and a proof that the functions F1.₁ (vecmfst ms) and F2.₁ (vecmsnd ms)
+    -- preserves the relations given by F*Rel 
     F*Rel-preserves : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ])
                       → preservesRel (F*Rel Rs) (F*Rel Ss) (F1.₁ (vecmfst ms)) (F2.₁ (vecmsnd ms))
 
-
+  -- given F*Rel and F*Rel-preserves, we can define the functor F* 
+  
   F*RelObj : ∀ (Rs : Vec RelObj k) → RelObj
   F*RelObj Rs = R[ (F1.₀ (vecfst Rs)) , (F2.₀ (vecsnd Rs)) , (F*Rel Rs) ] 
 
@@ -447,8 +255,9 @@ record RTObj*Components {k : ℕ} (F1 F2 : Functor (Sets^ k) Sets) : Set₁ wher
          ; F-resp-≈ = λ f≈g → Functor.F-resp-≈ F1∘π₁ f≈g , Functor.F-resp-≈ F2∘π₂ f≈g
          } 
 
-record RTObj2 (k : ℕ) : Set (lsuc lzero) where 
-  constructor RT2[_,_,_]
+
+record RTObj (k : ℕ) : Set (lsuc lzero) where 
+  constructor RT[_,_,_]
   open RelObj
   field 
     F1 : Functor (Sets^ k) Sets
@@ -458,18 +267,18 @@ record RTObj2 (k : ℕ) : Set (lsuc lzero) where
   F* : Functor (Rels^ k) Rels 
   F* = RTObj*Components.F* F*Components 
 
-RTMorph-resp : ∀ {k : ℕ} → (H K : RTObj2 k) → (d1 : NaturalTransformation (RTObj2.F1 H) (RTObj2.F1 K)) 
-         → (d2 : NaturalTransformation (RTObj2.F2 H) (RTObj2.F2 K)) 
+RTMorph-resp : ∀ {k : ℕ} → (H K : RTObj k) → (d1 : NaturalTransformation (RTObj.F1 H) (RTObj.F1 K)) 
+         → (d2 : NaturalTransformation (RTObj.F2 H) (RTObj.F2 K)) 
          → (Rs : Vec RelObj k) → Set 
-RTMorph-resp H K d1 d2 Rs = preservesRelObj (Functor.F₀ (RTObj2.F* H) Rs)
-                                            (Functor.F₀ (RTObj2.F* K) Rs)
+RTMorph-resp H K d1 d2 Rs = preservesRelObj (Functor.F₀ (RTObj.F* H) Rs)
+                                            (Functor.F₀ (RTObj.F* K) Rs)
                                             (NaturalTransformation.η d1 (vecfst Rs))
                                             (NaturalTransformation.η d2 (vecsnd Rs)) 
 
-record RTMorph2 {k : ℕ} (H K : RTObj2 k) : Set (lsuc lzero) where 
+record RTMorph {k : ℕ} (H K : RTObj k) : Set (lsuc lzero) where 
   constructor RTM[_,_,_] 
-  private module H = RTObj2 H
-  private module K = RTObj2 K 
+  private module H = RTObj H
+  private module K = RTObj K 
 
   field 
     d1 : NaturalTransformation H.F1 K.F1
@@ -479,260 +288,353 @@ record RTMorph2 {k : ℕ} (H K : RTObj2 k) : Set (lsuc lzero) where
     d-resp : ∀ {Rs : Vec RelObj k} → RTMorph-resp H K d1 d2 Rs 
 
   -- we can define a natural transformation
-  -- from H.F* to K.F* in terms of d1 and d2 
-  d* : NaturalTransformation (RTObj2.F* H) (RTObj2.F* K)
+  -- from H.F* to K.F* in terms of d1 and d2.
+  -- Naturality follows componentwise from naturality of d1 and d2,
+  -- and the fact that each component of d* preserves relations follows
+  -- directly from d-resp 
+  d* : NaturalTransformation (RTObj.F* H) (RTObj.F* K)
   d* = record { η = λ Rs → RM[ (NaturalTransformation.η d1 (vecfst Rs)) , (NaturalTransformation.η d2 (vecsnd Rs)) , d-resp ]
               ; commute = λ fs → (NaturalTransformation.commute d1 (vecmfst fs)) , NaturalTransformation.commute d2 (vecmsnd fs)
               ; sym-commute = λ fs → ( (NaturalTransformation.sym-commute d1 (vecmfst fs))) , (NaturalTransformation.sym-commute d2 (vecmsnd fs))  }
 
 
-
-idRTMorph : ∀ {k : ℕ} → (H : RTObj2 k) → RTMorph2 H H
+idRTMorph : ∀ {k : ℕ} → (H : RTObj k) → RTMorph H H
 idRTMorph {k} H = record { d1 = idnat ; d2 = idnat ; d-resp = λ xy∈H*R → xy∈H*R } 
 
-compose-RTMorph2 : ∀ {k} {J K L : RTObj2 k} → RTMorph2 K L → RTMorph2 J K → RTMorph2 J L
-compose-RTMorph2 RTM[ f1 , f2 , f-resp ] RTM[ g1 , g2 , g-resp ] = RTM[ f1 ∘v g1 , f2 ∘v g2 , f-resp ∘' g-resp ] 
+compose-RTMorph : ∀ {k} {J K L : RTObj k} → RTMorph K L → RTMorph J K → RTMorph J L
+compose-RTMorph RTM[ f1 , f2 , f-resp ] RTM[ g1 , g2 , g-resp ] = RTM[ f1 ∘v g1 , f2 ∘v g2 , f-resp ∘' g-resp ] 
 
 
-RTMorph2-≈ : ∀ {k} {H K : RTObj2 k} → (m1 m2 : RTMorph2 H K) → Set₁ 
-RTMorph2-≈ {k} m m' = [Sets^ k ,Sets] [ RTMorph2.d1 m ≈ RTMorph2.d1 m' ]
-                     ×' [Sets^ k ,Sets] [ RTMorph2.d2 m ≈ RTMorph2.d2 m' ]  
+RTMorph-≈ : ∀ {k} {H K : RTObj k} → (m1 m2 : RTMorph H K) → Set₁ 
+RTMorph-≈ {k} m m' = [Sets^ k ,Sets] [ RTMorph.d1 m ≈ RTMorph.d1 m' ]
+                     ×' [Sets^ k ,Sets] [ RTMorph.d2 m ≈ RTMorph.d2 m' ]  
 
-RTMorph2-≈-Equiv : ∀ {k} {A B : RTObj2 k} → IsEquivalence (RTMorph2-≈ {k} {A} {B})
-RTMorph2-≈-Equiv = record { refl = ≡.refl , ≡.refl ; sym = λ { (p1 , p2)  → ≡.sym p1 , ≡.sym p2  } ; trans = λ { (p1 , p2) (r1 , r2) → (≡.trans p1 r1) , (≡.trans p2 r2) }  } 
+RTMorph-≈-Equiv : ∀ {k} {A B : RTObj k} → IsEquivalence (RTMorph-≈ {k} {A} {B})
+RTMorph-≈-Equiv = record { refl = ≡.refl , ≡.refl ; sym = λ { (p1 , p2)  → ≡.sym p1 , ≡.sym p2  } ; trans = λ { (p1 , p2) (r1 , r2) → (≡.trans p1 r1) , (≡.trans p2 r2) }  } 
 
 
 RTCat : ℕ → Category (lsuc lzero) (lsuc lzero) (lsuc lzero) 
 RTCat k =  record
-  { Obj = RTObj2 k
-  ; _⇒_ = RTMorph2 
-  ; _≈_ = RTMorph2-≈  
+  { Obj = RTObj k
+  ; _⇒_ = RTMorph 
+  ; _≈_ = RTMorph-≈  
   ; id = λ {H} → idRTMorph H   
-  ; _∘_ =   compose-RTMorph2 
+  ; _∘_ =   compose-RTMorph 
   ; assoc =  ≡.refl , ≡.refl 
   ; sym-assoc =  ≡.refl , ≡.refl
   ; identityˡ = ≡.refl , ≡.refl
   ; identityʳ = ≡.refl , ≡.refl
   ; identity² = ≡.refl , ≡.refl
-  ; equiv = RTMorph2-≈-Equiv  
-  ; ∘-resp-≈ = λ { {f = f} {g} {h} {i} (f1≈h1 , f2≈h2) (g1≈i1 , g2≈i2) → SetFuncs.∘-resp-≈ {f = RTMorph2.d1 f} {RTMorph2.d1 g} {RTMorph2.d1 h} {RTMorph2.d1 i} f1≈h1 g1≈i1
-                                                                       , SetFuncs.∘-resp-≈ {f = RTMorph2.d2 f} {RTMorph2.d2 g} {RTMorph2.d2 h} {RTMorph2.d2 i} f2≈h2 g2≈i2 } 
+  ; equiv = RTMorph-≈-Equiv  
+  ; ∘-resp-≈ = λ { {f = f} {g} {h} {i} (f1≈h1 , f2≈h2) (g1≈i1 , g2≈i2) → SetFuncs.∘-resp-≈ {f = RTMorph.d1 f} {RTMorph.d1 g} {RTMorph.d1 h} {RTMorph.d1 i} f1≈h1 g1≈i1
+                                                                       , SetFuncs.∘-resp-≈ {f = RTMorph.d2 f} {RTMorph.d2 g} {RTMorph.d2 h} {RTMorph.d2 i} f2≈h2 g2≈i2 } 
   }
   where module SetFuncs = Category [Sets^ k ,Sets]
         
+π₁RT : ∀ {k} → Functor (RTCat k) [Sets^ k ,Sets]
+π₁RT {k} = record
+             { F₀ = RTObj.F1
+             ; F₁ = RTMorph.d1
+             ; identity = ≡.refl
+             ; homomorphism = ≡.refl
+             ; F-resp-≈ = λ f≈g → proj₁ f≈g
+             } 
 
-
+π₂RT : ∀ {k} → Functor (RTCat k) [Sets^ k ,Sets]
+π₂RT {k} = record
+             { F₀ = RTObj.F2
+             ; F₁ = RTMorph.d2
+             ; identity = ≡.refl
+             ; homomorphism = ≡.refl
+             ; F-resp-≈ = λ f≈g → proj₂ f≈g
+             } 
 
 -- should be able to embed RT k into Rels functor category
 embedRT : ∀ {k} → Functor (RTCat k) [Rels^ k ,Rels] 
 embedRT = record
-            { F₀ = λ Rt → {!!} 
+            { F₀ = λ Rt → RTObj.F* Rt 
             -- need to define natural transformation in [Rels^ k ,Rels] in terms
             -- of RTMorph.
-            ; F₁ = λ f → {!!} 
-            ; identity = {!!}
-            ; homomorphism = {!!}
-            ; F-resp-≈ = {!!}
+            ; F₁ = λ d → RTMorph.d* d  
+            ; identity = ≡.refl , ≡.refl
+            ; homomorphism = ≡.refl , ≡.refl
+            ; F-resp-≈ = λ f≈g → proj₁ f≈g  , proj₂ f≈g
             } 
 
 
-{-
+
+RelSet : ∀ (R : RelObj) → Set
+RelSet R[ X , Y , R* ] = Σ[ x ∈ X ] (Σ[ y ∈ Y ] (x , y ∈ R* ))
+
+RelSet-map : ∀ {R S : RelObj} → RelMorph R S → RelSet R → RelSet S
+RelSet-map RM[ ffst , fsnd , preserves ] (x , y , rxy) = ffst x , fsnd y , preserves rxy
+
+RelSet-cong : ∀ (R : RelObj) (x x' : fst R) (y y' : snd R) → (x ≡ x') → (y ≡ y') → (p : x , y ∈ (rel R)) → (p' : x' , y' ∈ (rel R)) → (x , (y , p)) ≡ (x' , (y' , p'))
+RelSet-cong R x .x y .y ≡.refl ≡.refl p p' = ≡.cong (_,_ x) (≡.cong (_,_ y) {!    !})
+-- (≡.cong (_,_ y) (irrel (rel R)  p p'))
 
 
 
+RelSet-resp : ∀ (R S : RelObj) (f g : Rels [ R , S ]) (f1≈g1 : (Sets Category.≈ mfst f) (mfst g))
+                → (f2≈g2 : (Sets Category.≈ msnd f) (msnd g)) (x : fst R) (y : snd R)
+                → (rxy : x , y ∈ rel R )
+                → RelSet-map f (x , y , rxy) ≡ RelSet-map g (x , y , rxy)
+RelSet-resp R S f g f1≈g1 f2≈g2 x y rxy =
+    let 
+        fx = mfst f x ; fy = msnd f y
+        gx = mfst g x ; gy = msnd g y 
 
-vecproj₁ : ∀ {k} {As Bs : Vec Set k} → (Sets^ k) [ zipWith _×'_ As Bs  , As ]
-vecproj₁ {zero} {[]} {[]} = bigtt
-vecproj₁ {suc k} {A ∷ As} {B ∷ Bs} = proj₁ , vecproj₁ 
+        pf : fx , fy ∈ rel S 
+        pf = RelMorph.preserves f rxy
 
-vecproj₂ : ∀ {k} {As Bs : Vec Set k} → (Sets^ k) [ zipWith _×'_ As Bs  , Bs ]
-vecproj₂ {zero} {[]} {[]} = bigtt
-vecproj₂ {suc k} {A ∷ As} {B ∷ Bs} = proj₂ , vecproj₂ 
+        pg : gx , gy ∈ rel S
+        pg = RelMorph.preserves g rxy
+
+        fx≡gx = f1≈g1 {x}
+        fy≡gy = f2≈g2 {y}
+    in RelSet-cong S fx gx fy gy fx≡gx fy≡gy pf pg 
+
+
+RelSetF : Functor Rels Sets
+RelSetF = record
+            { F₀ = RelSet
+            ; F₁ = RelSet-map
+            ; identity = ≡.refl
+            ; homomorphism = ≡.refl
+            ; F-resp-≈ = λ { {A = R} {B = S} {f = f} {g = g} (f₁≈g₁ , f₂≈g₂) {x , y , rxy} → RelSet-resp R S f g f₁≈g₁ f₂≈g₂ x y rxy } 
+            } 
+
+
+-- get the underlying product  of a relation 
+RelUProd : ∀ (R : RelObj) → Set
+RelUProd R[ X , Y , _ ] = X ×' Y
+
+RelUProdF : Functor Rels Sets
+RelUProdF = record
+                { F₀ = RelUProd
+                ; F₁ = λ f → ×'-map (mfst f) (msnd f)
+                ; identity = ≡.refl
+                ; homomorphism = ≡.refl
+                ; F-resp-≈ = λ { (f1≈g1 , f2≈g2) → ×'-cong f1≈g1 f2≈g2 } 
+                } 
+
+RelUProd⇒π₁ : NaturalTransformation RelUProdF π₁
+RelUProd⇒π₁ = ntHelper (record { η = λ R → proj₁ ;  commute = λ f → ≡.refl }) 
+
+RelUProd⇒π₂ : NaturalTransformation RelUProdF π₂
+RelUProd⇒π₂ = ntHelper (record { η = λ R → proj₂ ;  commute = λ f → ≡.refl }) 
+
+-- function from the relation seen as an object to the underlying product 
+incl : ∀ (R : RelObj) → RelSet R → RelUProd R
+incl R (x , y , _) = x , y
+
+inclNat : NaturalTransformation RelSetF RelUProdF 
+inclNat = ntHelper (record { η = incl ; commute = λ f → ≡.refl }) 
+
+
+
 
 
 
 module Identities {k : ℕ} (F : Functor (Sets^ k) Sets) where 
-{- this is more developed in RelCats-Set-irrel
-  
-    module F = Functor F 
+    private module F = Functor F 
     open F using (F₀ ; F₁) 
 
-    -- need to see a relation as a set 
-    -- to define graph relation transformers 
-    RelSet : ∀ (R : RelObj) → Set
-    RelSet R[ X , Y , R* ] = Σ[ x ∈ X ] (Σ[ y ∈ Y ] R* x y)
 
-    RelSet-map : ∀ {R S : RelObj} → RelMorph R S → RelSet R → RelSet S
-    RelSet-map RM[ ffst , fsnd , preserves ] (x , y , rxy) = ffst x , fsnd y , preserves rxy
+    factor-subset : ∀ {A B C : Set} → (f : A → B ×' C) → REL0 B C 
+    factor-subset {A} f b c = Σ[ x ∈ A ] f x ≡ (b , c)  
 
-    {- Maybe we can define this if RelMorph-≈ also includes proof about preserves f ≈ preserves g
-    RelSetF : Functor Rels Sets
-    RelSetF = record
-                { F₀ = RelSet
-                ; F₁ = RelSet-map
-                ; identity = ≡.refl
-                ; homomorphism = ≡.refl
-                ; F-resp-≈ = λ { {f = f} {g = g} (f₁≈g₁ , f₂≈g₂) {x , y , rxy} → {! RelMorph.preserves g rxy!}  } 
-                } 
-    -}
+    vmap-foreach : ∀ {o l e} {C : Category o l e} (F G : Functor C Sets)
+                    → (nat : NaturalTransformation F G)
+                    → ∀ xs → Sets^ k [ vmap (Functor.F₀ F) xs , vmap (Functor.F₀ G) xs ] 
+    vmap-foreach {C = C} F G nat = NaturalTransformation.η (VecFuncH.HFunc^-map C Sets nat) 
 
-    -- get the underlying product  of a relation 
-    RelUProd : ∀ (R : RelObj) → Set
-    RelUProd R[ X , Y , _ ] = X ×' Y
-
-    -- function from the relation seen as an object to the underlying product 
-    incl : ∀ (R : RelObj) → RelSet R → RelUProd R
-    incl R (x , y , _) = x , y
-
-
-    h-A×B : ∀ {As Bs : Vec Set k} 
-            → F₀ (zipWith _×'_ As Bs) → F₀ As ×' F₀ Bs
-    h-A×B {As} {Bs} FAs×Bs = < F₁ vecproj₁ , F₁ vecproj₂ > FAs×Bs 
-
-
-
-    -- normalized Goal: foreach2 (λ A B → A → B) (vmap RelSet Rs)
-                        --       (vmap (λ R → Σ (fst R) (λ x → snd R)) Rs)
-    -- normalized Goal: foreach2 (λ R R' → RelSet R → fst R' ×' snd R' ) Rs Rs
-    -- normalized Goal: foreach (λ R → RelSet R → fst R ×' snd R ) Rs
-    -- normalized Goal: foreach incl Rs
-    -- normalized Goal: Vec (Σ RelObj (incl R)) n
-
-    vmap-foreach : ∀ {l} {k} {X : Set l} (f g : X → Set) → (nat : ∀ x → f x → g x) → (xs : Vec X k) → Sets^ k [ vmap f xs , vmap g xs ] 
-    vmap-foreach f g nat [] = bigtt
-    vmap-foreach f g nat (x ∷ xs) = nat x , vmap-foreach f g nat xs 
-
+    vmap-foreach-commute : ∀ {o l e} {C : Category o l e} (F G : Functor C Sets)
+                    → (nat : NaturalTransformation F G)
+                    → ∀ {xs} {ys} (fs : (Cat^ C k) [ xs , ys ])
+                    → Sets^ k [ vmap-foreach F G nat ys ∘SetVec (Func^-map C Sets F fs)
+                              ≈ (Func^-map C Sets G fs) ∘SetVec vmap-foreach F G nat xs ]
+    vmap-foreach-commute {C = C} F G nat = NaturalTransformation.commute (VecFuncH.HFunc^-map C Sets nat)  
 
     h-A×B-R : ∀ (Rs : Vec RelObj k)
             → F₀ (vmap RelUProd Rs) → F₀ (vecfst Rs) ×' F₀ (vecsnd Rs)
-    h-A×B-R Rs = < F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Rs) , F₁ ( (vmap-foreach RelUProd snd (λ R → proj₂) Rs)) >  
+    h-A×B-R Rs = < F₁ (vmap-foreach RelUProdF π₁ RelUProd⇒π₁ Rs) , F₁ ( (vmap-foreach RelUProdF π₂  RelUProd⇒π₂ Rs)) >  
 
-    vmap-incl : ∀ {k} (Rs : Vec RelObj k) → Sets^ k [ vmap RelSet Rs , vmap RelUProd Rs ] 
-    vmap-incl = vmap-foreach RelSet RelUProd incl 
+    vmap-incl : ∀ (Rs : Vec RelObj k) → Sets^ k [ vmap RelSet Rs , vmap RelUProd Rs ] 
+    vmap-incl = vmap-foreach RelSetF RelUProdF inclNat 
 
-    -- Goal: Sets^ k [ vmap RelSet Rs , vmap (λ R → fst R ×' snd R) Rs ]
+    -- Goal: Sets^ k [ vmap RelSet Rs , vmap (λ R → fst R × snd R) Rs ]
     Fincl :  ∀ (Rs : Vec RelObj k)  
             → F₀ (vmap RelSet Rs) → F₀ (vmap RelUProd Rs)
     Fincl Rs FRs = F₁ ( vmap-incl Rs ) FRs
 
-    Fincl' :  ∀ (Rs : Vec RelObj k)  
-            → F₀ (vmap RelSet Rs) → F₀ (zipWith _×'_ (vecfst Rs) (vecsnd Rs))
-    Fincl' Rs FRs = {!!} 
-    
-    Fincl-lem : ∀ {k} (Rs : Vec RelObj k)  
-            → (vmap RelUProd Rs)
-            ≡ zipWith _×'_ (vecfst Rs) (vecsnd Rs)
-    Fincl-lem [] = ≡.refl
-    Fincl-lem (R ∷ Rs) = ≡.cong (_∷_ (RelUProd R)) (Fincl-lem Rs)
-
-
-    factor-subset : ∀ {A B C : Set} → (f : A → B ×' C) → REL0 B C 
-    factor-subset {A = A} f b c = Σ[ x ∈ A ] f x ≡ (b , c)    
-
     idRT** : ∀ (Rs : Category.Obj (Rels^ k)) → REL0 (F₀ (vecfst Rs)) (F₀ (vecsnd Rs))
     idRT** Rs = factor-subset {A = F₀ (vmap RelSet Rs)} (h-A×B-R Rs ∘' Fincl Rs)
 
-    -- this is like functorial action for 'vmap f' for functor f : Rels → Sets 
-    map-fst' : ∀ {k} (Rs Ss : Vec RelObj k) (f : RelObj → Set) (fmap : ∀ {R S} → RelMorph R S → f R → f S)
-               → (ms : Rels^ k [ Rs , Ss ]) → Sets^ k [ vmap f Rs , vmap f Ss ]
-    map-fst' [] [] _ _ _ = bigtt
-    map-fst' (R ∷ Rs) (S ∷ Ss) f fmap (m , ms) = fmap m , map-fst' Rs Ss f fmap ms 
+    idRT**-preserves : ∀ {Rs Ss : Vec RelObj k} (ms : Rels^ k [ Rs , Ss ])
+                       → preservesRel (idRT** Rs) (idRT** Ss) (Functor.₁ F (vecmfst ms))
+                                                              (Functor.₁ F (vecmsnd ms))
+    idRT**-preserves {Rs} {Ss} ms {x} {y} (F-SetRs , h∘Fincl-Rs≡x,y ) =
+      let map-ms : F₀ (vmap RelSet Rs) → F₀ (vmap RelSet Ss) 
+          map-ms = F₁ (Functor.F₁ (Func^ Rels Sets RelSetF k) ms)
 
-    map-fst : ∀ {k} (Rs Ss : Vec RelObj k) (fs : Rels^ k [ Rs , Ss ]) → Sets^ k [ vecfst Rs , vecfst Ss ]
-    map-fst [] [] _ = bigtt
-    map-fst (R ∷ Rs) (S ∷ Ss) (f , fs) = mfst f , map-fst Rs Ss fs
+          vmapfst = vmap-foreach RelUProdF π₁ RelUProd⇒π₁ 
+          vmapsnd  = vmap-foreach RelUProdF π₂ RelUProd⇒π₂ 
 
-    map-snd : ∀ {k} (Rs Ss : Vec RelObj k) (fs : Rels^ k [ Rs , Ss ]) → Sets^ k [ vecsnd Rs , vecsnd Ss ]
-    map-snd Rs Ss fs = map-fst' Rs Ss snd msnd fs 
+          vmapRelSet = Func^-map Rels Sets RelSetF 
+          vmapRelUProd  = Func^-map Rels Sets RelUProdF
 
+          have1 : F₁ (vmapfst Rs) (F₁ (vmap-incl Rs) F-SetRs)
+                    ≡ x 
+          have1 = ,-injectiveˡ h∘Fincl-Rs≡x,y  
 
+          have2 : F₁ (vmapsnd Rs) (F₁ (vmap-incl Rs) F-SetRs)
+                  ≡ y 
+          have2 = ,-injectiveʳ h∘Fincl-Rs≡x,y   
 
+          com1 : (Sets^ k) [ vmapfst Ss ∘SetVec vmapRelUProd ms
+                           ≈ vecmfst ms ∘SetVec vmapfst Rs ]
+          com1 = vmap-foreach-commute RelUProdF π₁ RelUProd⇒π₁ ms
 
-   --  Goal: (F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Ss)
-   --      (F₁ (vmap-foreach RelSet RelUProd incl Ss)
-   --          (F₁ (map-fst' Rs Ss RelSet RelSet-map fs) FRs))
-   --      ,
-   --      F₁ (vmap-foreach RelUProd snd (λ R → proj₂) Ss)
-   --      (F₁ (vmap-foreach RelSet RelUProd incl Ss)
-   --          (F₁ (map-fst' Rs Ss RelSet RelSet-map fs) FRs)))
-   --      ≡ (F₁ (map-fst Rs Ss fs) FAs , F₁ (map-fst' Rs Ss snd msnd fs) FBs)
-   --  ————————————————————————————————————————————————————————————
-   --  e   : (F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Rs)
-   --      (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
-   --      ,
-   --      F₁ (vmap-foreach RelUProd snd (λ R → proj₂) Rs)
-   --      (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs))
-   --      ≡ (FAs , FBs)
+          com2 : (Sets^ k) [ vmap-incl Ss ∘SetVec vmapRelSet ms
+                           ≈ vmapRelUProd ms ∘SetVec vmap-incl Rs ]
+          com2 = vmap-foreach-commute RelSetF RelUProdF inclNat ms
 
-    idRT*-preserves : ∀ (Rs Ss : Vec RelObj k) (fs : Rels^ k [ Rs , Ss ])
-                      → preservesRelObj
-                            R[ F₀ (vecfst Rs) , F₀ (vecsnd Rs) , idRT** Rs ]
-                            R[ F₀ (vecfst Ss) , F₀ (vecsnd Ss) , idRT** Ss ]
-                            (F₁ (map-fst Rs Ss fs)) (F₁ (map-snd Rs Ss fs))
-    idRT*-preserves Rs Ss fs {FAs} {FBs} (FRs , e) = (F₁  mapfs FRs) , {!!}
-        where mapfs : Sets^ k [ vmap RelSet Rs , vmap RelSet Ss ] 
-              mapfs = map-fst' Rs Ss RelSet RelSet-map fs 
+          -- naturality proofs 
+          comp1 : (Sets^ k) [ vmapfst Ss ∘SetVec (vmap-incl Ss ∘SetVec vmapRelSet ms)
+                             ≈ vecmfst ms ∘SetVec (vmapfst Rs ∘SetVec vmap-incl Rs) ]
+          comp1 =  begin≈ vmapfst Ss ∘SetVec (vmap-incl Ss ∘SetVec vmapRelSet ms)
+                        ≈⟨ ( refl⟩∘⟨ com2) ⟩
+                        vmapfst Ss ∘SetVec (vmapRelUProd ms ∘SetVec vmap-incl Rs)
+                        ≈⟨ Sk.sym-assoc ⟩
+                        (vmapfst Ss ∘SetVec vmapRelUProd ms) ∘SetVec vmap-incl Rs
+                        ≈⟨ com1 ⟩∘⟨refl ⟩ 
+                        (vecmfst ms ∘SetVec vmapfst Rs)  ∘SetVec vmap-incl Rs
+                        ≈⟨ Sk.assoc ⟩
+                        vecmfst ms ∘SetVec (vmapfst Rs ∘SetVec vmap-incl Rs)
+                        ≈∎ 
+    
+          h1 : F₁ (vmapfst Ss) (F₁ (vmap-incl Ss) (F₁ (vmapRelSet ms) F-SetRs))
+               ≡ F₁ (vecmfst ms) x 
+          h1 =  begin F₁ (vmapfst Ss) (F₁ (vmap-incl Ss) (F₁ (vmapRelSet ms) F-SetRs)) 
+                     ≡˘⟨ ≡.cong (F₁ (vmapfst Ss)) F.homomorphism ⟩
+                     F₁ (vmapfst Ss) (F₁ ((vmap-incl Ss) ∘SetVec  (vmapRelSet ms)) F-SetRs)
+                     ≡˘⟨ F.homomorphism ⟩
+                     F₁ ((vmapfst Ss) ∘SetVec ((vmap-incl Ss) ∘SetVec (vmapRelSet ms))) F-SetRs
+                     ≡⟨ F.F-resp-≈ comp1 ⟩ 
+                     F₁ (vecmfst ms ∘SetVec (vmapfst Rs ∘SetVec vmap-incl Rs)) F-SetRs
+                     ≡⟨  F.homomorphism ⟩ 
+                     F₁ (vecmfst ms) (F₁ (vmapfst Rs ∘SetVec vmap-incl Rs) F-SetRs)
+                     ≡⟨  ≡.cong (F₁ (vecmfst ms)) F.homomorphism ⟩ 
+                     F₁ (vecmfst ms) (F₁ (vmapfst Rs) (F₁ (vmap-incl Rs) F-SetRs))
+                     ≡⟨ ≡.cong (F₁ (vecmfst ms)) have1  ⟩ 
+                     F₁ (vecmfst ms) x 
+                     ∎ 
 
+          comp2 : (Sets^ k) [ vmapsnd Ss ∘SetVec (vmap-incl Ss ∘SetVec vmapRelSet ms)
+                             ≈ vecmsnd ms ∘SetVec (vmapsnd Rs ∘SetVec vmap-incl Rs) ]
+          comp2 =  begin≈ vmapsnd Ss ∘SetVec (vmap-incl Ss ∘SetVec vmapRelSet ms)
+                        ≈⟨ ( refl⟩∘⟨ com2) ⟩
+                        vmapsnd Ss ∘SetVec (vmapRelUProd ms ∘SetVec vmap-incl Rs)
+                        ≈⟨ Sk.sym-assoc ⟩
+                        (vmapsnd Ss ∘SetVec vmapRelUProd ms) ∘SetVec vmap-incl Rs
+                        ≈⟨  vmap-foreach-commute RelUProdF π₂ RelUProd⇒π₂ ms ⟩∘⟨refl ⟩ 
+                        (vecmsnd ms ∘SetVec vmapsnd Rs)  ∘SetVec vmap-incl Rs
+                        ≈⟨ Sk.assoc ⟩
+                        vecmsnd ms ∘SetVec (vmapsnd Rs ∘SetVec vmap-incl Rs)
+                        ≈∎ 
+    
+          h2 : F₁ (vmapsnd Ss) (F₁ (vmap-incl Ss) (F₁ (vmapRelSet ms) F-SetRs))
+               ≡ F₁ (vecmsnd ms) y
+          h2 =  begin F₁ (vmapsnd Ss) (F₁ (vmap-incl Ss) (F₁ (vmapRelSet ms) F-SetRs)) 
+                     ≡˘⟨ ≡.cong (F₁ (vmapsnd Ss)) F.homomorphism ⟩
+                     F₁ (vmapsnd Ss) (F₁ ((vmap-incl Ss) ∘SetVec  (vmapRelSet ms)) F-SetRs)
+                     ≡˘⟨ F.homomorphism ⟩
+                     F₁ ((vmapsnd Ss) ∘SetVec ((vmap-incl Ss) ∘SetVec (vmapRelSet ms))) F-SetRs
+                     ≡⟨ F.F-resp-≈ comp2 ⟩ 
+                     F₁ (vecmsnd ms ∘SetVec (vmapsnd Rs ∘SetVec vmap-incl Rs)) F-SetRs
+                     ≡⟨  F.homomorphism ⟩ 
+                     F₁ (vecmsnd ms) (F₁ (vmapsnd Rs ∘SetVec vmap-incl Rs) F-SetRs)
+                     ≡⟨  ≡.cong (F₁ (vecmsnd ms)) F.homomorphism ⟩ 
+                     F₁ (vecmsnd ms) (F₁ (vmapsnd Rs) (F₁ (vmap-incl Rs) F-SetRs))
+                     ≡⟨ ≡.cong (F₁ (vecmsnd ms)) have2  ⟩ 
+                     F₁ (vecmsnd ms) y
+                     ∎ 
 
+          h : h-A×B-R Ss (Fincl Ss (map-ms F-SetRs))
+              ≡ (Functor.₁ F (vecmfst ms) x , Functor.₁ F (vecmsnd ms) y)
+          h =  ≡.cong₂ _,_ h1 h2 
 
-    -- Goal: h-A×B-R Ss (Fincl Ss (F₁ mapfs FRs)) ≡
-    --     (F₁ (map-fst Rs Ss fs) FAs , F₁ (map-snd Rs Ss fs) FBs)
-    --    ≡ 
-    --     (F₁ (map-fst Rs Ss fs) F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Rs) (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
-    --   ,  F₁ (map-snd Rs Ss fs) F₁ (vmap-foreach RelUProd snd (λ R → proj₂) Rs) (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
+       in map-ms F-SetRs ,  h
+        where open ≡.≡-Reasoning
+              module Sk = Category (Sets^ k)
+              open Sk.HomReasoning hiding (step-≡ ; step-≡˘) renaming (begin_ to begin≈_ ; _∎ to _≈∎) 
 
-    -- Goal: idRT** Ss (F₁ (map-fst Rs Ss fs) FAs)
-                    -- (F₁ (map-snd Rs Ss fs) FBs)
-    -- ————————————————————————————————————————————————————————————
-    -- e   : h-A×B-R Rs (Fincl Rs FRs) ≡ (FAs , FBs)
-    -- FRs : F₀ (vmap RelSet Rs)
-    -- FBs : F₀ (vecsnd Rs)
-    -- FAs : F₀ (vecfst Rs)
-    -- fs  : Rels^ k [ Rs , Ss ]
-
-    -- e   : (F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Rs)
-       --     (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
-    --     ,
-    --     F₁ (vmap-foreach RelUProd snd (λ R → proj₂) Rs)
-    --     (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs))
-    --     ≡ (FAs , FBs)
-
-    -- FAs = F₁ (vmap-foreach RelUProd fst (λ R → proj₁) Rs) (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
-    -- FBs = F₁ (vmap-foreach RelUProd snd (λ R → proj₂) Rs) (F₁ (vmap-foreach RelSet RelUProd incl Rs) FRs)
-
-
-    idRT* : Functor (Rels^ k) Rels 
-    idRT* = record
-                { F₀ = λ Rs → R[ (F₀ (vecfst Rs)) , (F₀ (vecsnd Rs)) , idRT** Rs ]
-                ; F₁ = λ {Rs} {Ss} fs → RM[ F₁ ( map-fst Rs Ss fs) , F₁ (map-snd Rs Ss fs) , {! idRT*-preserves  !} ]
-                ; identity = {!!}
-                ; homomorphism = {!!}
-                ; F-resp-≈ = {!!}
-                } 
-
+    idRT*Components : RTObj*Components F F 
+    idRT*Components = record { F*Rel = idRT** ; F*Rel-preserves = idRT**-preserves } 
 
     idRT : RTObj k
-    idRT = record
-            { F1 = F
-            ; F2 = F
-            ; F* = idRT* 
-            ; F*-preserves-1 = λ Rs → ≡.refl
-            ; F*-preserves-2 = λ Rs → ≡.refl
-            } 
+    idRT = RT[ F , F , idRT*Components  ]
 
-
--}
 open Identities 
 
--- RTEndo : ∀ {k} → Endofunctor (RT k) → Functor (Sets^ k) Sets
--- RTEndo H = record
---              { F₀ = {!!}
---              ; F₁ = {!!}
---              ; identity = {!!}
---              ; homomorphism = {!!}
---              ; F-resp-≈ = {!!}
---              } 
 
+idRTFunctor-resp : ∀ {k} {F G : Category.Obj [Sets^ k ,Sets]}
+                   → (η : [Sets^ k ,Sets] [ F , G ])
+                   → {Rs : Vec RelObj k}
+                   → RTMorph-resp (idRT F) (idRT G) η η Rs
+idRTFunctor-resp {k} {F} {G} η {Rs} {x} {y} (F*Rs , hF*Rs≡x,y) =
+  let π₁Rs = VecFuncH.HFunc^-map-comp Rels Sets (RelUProd⇒π₁) Rs
+      π₂Rs = VecFuncH.HFunc^-map-comp Rels Sets (RelUProd⇒π₂) Rs
+      inclRs = VecFuncH.HFunc^-map-comp Rels Sets (inclNat) Rs
+      vmapRelSet = NaturalTransformation.η η (vmap (RelSet) Rs) 
+
+      have1 : Functor.F₁ F π₁Rs (Functor.F₁ F inclRs F*Rs) ≡ x
+      have1 = ,-injectiveˡ hF*Rs≡x,y 
+
+      have1' : Functor.F₁ F (π₁Rs ∘SetVec inclRs) F*Rs ≡ x
+      have1' = ≡.trans (Functor.homomorphism F) have1
+
+      have2 : Functor.F₁ F π₂Rs (Functor.F₁ F inclRs F*Rs) ≡ y
+      have2 = ,-injectiveʳ hF*Rs≡x,y 
+
+      have2' : Functor.F₁ F (π₂Rs ∘SetVec inclRs) F*Rs ≡ y
+      have2' = ≡.trans (Functor.homomorphism F) have2
+
+      h1 : Functor.F₁ G π₁Rs (Functor.F₁ G inclRs (vmapRelSet F*Rs))
+           ≡ NaturalTransformation.η η (vecfst Rs) x
+      h1 = begin Functor.F₁ G π₁Rs (Functor.F₁ G inclRs (vmapRelSet F*Rs))
+                ≡˘⟨ Functor.homomorphism G ⟩
+                 Functor.F₁ G (π₁Rs ∘SetVec inclRs) (vmapRelSet F*Rs)
+                ≡⟨ NaturalTransformation.sym-commute η (π₁Rs ∘SetVec inclRs)  ⟩
+                 NaturalTransformation.η η (vecfst Rs) (Functor.F₁ F (π₁Rs ∘SetVec inclRs) F*Rs)
+                ≡⟨ ≡.cong (NaturalTransformation.η η (vecfst Rs)) have1' ⟩ 
+                NaturalTransformation.η η (vecfst Rs) x
+                ∎   
+
+      h2 : Functor.F₁ G π₂Rs (Functor.F₁ G inclRs (vmapRelSet F*Rs))
+           ≡ NaturalTransformation.η η (vecsnd Rs) y
+      h2 = begin Functor.F₁ G π₂Rs (Functor.F₁ G inclRs (vmapRelSet F*Rs))
+                ≡˘⟨ Functor.homomorphism G ⟩
+                 Functor.F₁ G (π₂Rs ∘SetVec inclRs) (vmapRelSet F*Rs)
+                ≡⟨ NaturalTransformation.sym-commute η (π₂Rs ∘SetVec inclRs)  ⟩
+                 NaturalTransformation.η η (vecsnd Rs) (Functor.F₁ F (π₂Rs ∘SetVec inclRs) F*Rs)
+                ≡⟨ ≡.cong (NaturalTransformation.η η (vecsnd Rs)) have2' ⟩ 
+                NaturalTransformation.η η (vecsnd Rs) y
+                ∎   
+      
+   in (NaturalTransformation.η η (vmap (RelSet) Rs) F*Rs ) , ≡.cong₂ _,_ h1 h2 
+     where open ≡.≡-Reasoning
+
+
+idRTFunctor : ∀ {k} → Functor [Sets^ k ,Sets] (RTCat k)
+idRTFunctor = record
+                { F₀ = λ F → idRT F
+                ; F₁ = λ η → RTM[ η , η , idRTFunctor-resp η ] 
+                ; identity = ≡.refl , ≡.refl
+                ; homomorphism = ≡.refl , ≡.refl
+                ; F-resp-≈ = λ f≈g → f≈g , f≈g
+                } 
 
 
 module PolynomialRels where 
@@ -892,229 +794,274 @@ open PolynomialRelFunctors public
 
 
 
--- second order relation transformer over H1, H2 
--- -- TODO move this to RelCats-x 
--- -- this should give all the data needed to define an endofunctor on RT k 
---
--- TODO implement all of Definition 3.6 in mscs.pdf
+
+
+
+record HRTObj* {k : ℕ} (H1 H2 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) : Set₁ where
+  module H1 = Functor H1 
+  module H2 = Functor H2 
+  open RelObj
+  field
+
+    H*RTRel : ∀ (Rt : RTObj k) (Rs : Vec RelObj k)
+              → REL0 (Functor.F₀ (Functor.F₀ H1 (RTObj.F1 Rt)) (vecfst Rs))
+                     (Functor.F₀ (Functor.F₀ H2 (RTObj.F2 Rt)) (vecsnd Rs))
+
+    -- second 'implicit' bullet point after definition 3.6 
+    H*RTRel-preserves : ∀ (Rt : RTObj k) → {Rs Ss : Vec RelObj k}
+                        → (ms : Rels^ k [ Rs , Ss ])
+                        → preservesRel (H*RTRel Rt Rs) (H*RTRel Rt Ss)
+                            (Functor.F₁ (Functor.₀ H1 (RTObj.F1 Rt)) (vecmfst ms))
+                            (Functor.F₁ (Functor.₀ H2 (RTObj.F2 Rt)) (vecmsnd ms))
+
+    -- third 'implicit' bullet point after definition 3.6 
+    H*RT-preserves : ∀ {Rt St : RTObj k} (m : RTMorph Rt St) → {Rs : Vec RelObj k}
+                        → preservesRel (H*RTRel Rt Rs) (H*RTRel St Rs)
+                            (NaturalTransformation.η (H1.F₁ (RTMorph.d1 m)) (vecfst Rs))
+                            (NaturalTransformation.η (H2.F₁ (RTMorph.d2 m)) (vecsnd Rs))
+                            
+  -- end fields -- 
+
+  -- action of HRT on objects (relation transformers) 
+  H*Obj : ∀ (Rt : RTObj k) → Functor (Rels^ k) Rels
+  H*Obj Rt@(RT[ F1 , F2 , F* ]) = RTObj.F* RT[ H1.₀ F1  , H2.₀ F2 , record { F*Rel = H*RTRel Rt ; F*Rel-preserves = H*RTRel-preserves Rt } ] 
+
+
+  H*-map-component : ∀ {Rt St : Category.Obj (RTCat k)} → (d : RTMorph Rt St)
+                      → (Rs : Vec RelObj k)
+                      → RelMorph (Functor.F₀ (H*Obj Rt) Rs) (Functor.F₀ (H*Obj St) Rs)
+  H*-map-component m@(RTM[ d1 , d2 , d-resp ]) Rs =  RM[ (NaturalTransformation.η (Functor.F₁ H1 d1) (vecfst Rs)) , (NaturalTransformation.η (Functor.F₁ H2 d2) (vecsnd Rs)) , H*RT-preserves m ] 
+  
+  -- action of HRT on morphisms of relation transformers 
+  H*-map : ∀ {Rt St : Category.Obj (RTCat k)}
+           → (d : RTMorph Rt St)
+           → [Rels^ k ,Rels] [ H*Obj Rt , H*Obj St ] 
+  H*-map {Rt} m@(RTM[ d1 , d2 , d-resp ]) =
+         ntHelper (record { η = H*-map-component m
+                          ; commute = λ fs → NaturalTransformation.commute (Functor.F₁ H1 d1) (vecmfst fs)
+                                          , NaturalTransformation.commute (Functor.F₁ H2 d2) (vecmsnd fs)})
+
+  -- these data comprise a functor from RT to [Rels^ k ,Rels]
+  H* : Functor (RTCat k) [Rels^ k ,Rels]
+  H* = record
+         { F₀ = λ Rt → H*Obj Rt 
+         ; F₁ = λ {Rt} {St} d → H*-map d
+         ; identity = (Functor.identity H1) , (Functor.identity H2)
+         ; homomorphism = (Functor.homomorphism H1) , (Functor.homomorphism H2)
+         ; F-resp-≈ = λ f≈g → (Functor.F-resp-≈ H1 (proj₁ f≈g)) , (Functor.F-resp-≈ H2 (proj₂ f≈g))
+         } 
+
+
+record HRTObj (k : ℕ) : Set₁ where 
+  field
+    H1 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]
+    H2 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]
+
+    H*Obj : HRTObj* H1 H2 
+  -- end fields 
+
+  H* : Functor (RTCat k) [Rels^ k ,Rels]
+  H* = HRTObj*.H* H*Obj
+
+  HEndo-rel* : ∀ (Rt : RTObj k) → RTObj*Components (Functor.F₀ H1 (RTObj.F1 Rt)) (Functor.F₀ H2 (RTObj.F2 Rt))
+  HEndo-rel* Rt = (record { F*Rel = HRTObj*.H*RTRel H*Obj Rt ; F*Rel-preserves = HRTObj*.H*RTRel-preserves H*Obj Rt }) 
+
+  HEndo-obj : ∀ (Rt : RTObj k) → RTObj k
+  HEndo-obj Rt@(RT[ F1 , F2 , F* ]) = RT[ (Functor.F₀ H1 F1) , (Functor.F₀ H2 F2) , HEndo-rel* Rt ] 
+  -- HEndo-rel* Rt ] 
+
+  HEndo-map : ∀ {Rt St : RTObj k} (d : RTMorph Rt St) → RTMorph (HEndo-obj Rt) (HEndo-obj St)
+  HEndo-map d@(RTM[ d1 , d2 , d-resp ]) = RTM[ (Functor.F₁ H1 d1) , (Functor.F₁ H2 d2) , HRTObj*.H*RT-preserves H*Obj d ] 
+  
+
+  HEndo : Functor (RTCat k) (RTCat k) 
+  HEndo = record
+            { F₀ = λ Rt → HEndo-obj Rt 
+            ; F₁ = HEndo-map 
+            ; identity = (Functor.identity H1) , (Functor.identity H2)
+            ; homomorphism = (Functor.homomorphism H1) , (Functor.homomorphism H2)
+            ; F-resp-≈ = λ { (f1≈g1 , f2≈g2) → Functor.F-resp-≈ H1 f1≈g1 , Functor.F-resp-≈ H2 f2≈g2 } 
+            } 
+
+record HRTMorph {k : ℕ} (H K : HRTObj k) : Set₁ where
+  constructor HRTM[_,_,_]
+  module H = HRTObj H
+  module K = HRTObj K
+
+  open H using (H* ; H1 ; H2)
+  open K renaming (H* to K* ; H1 to K1 ; H2 to K2)
+
+  field 
+    σ1 : NaturalTransformation H.H1 K.H1 
+    σ2 : NaturalTransformation H.H2 K.H2 
+
+    -- need this extra condition (implicit requirement given after dfn 3.7) 
+    σ-preserves : ∀ (Rt : RTObj k) (Rs : Vec RelObj k)
+                  → preservesRelObj (Functor.F₀ (Functor.F₀ H* Rt) Rs)
+                                    (Functor.F₀ (Functor.F₀ K* Rt) Rs)
+                    (NaturalTransformation.η (NaturalTransformation.η σ1 (RTObj.F1 Rt)) (vecfst Rs))
+                    (NaturalTransformation.η (NaturalTransformation.η σ2 (RTObj.F2 Rt)) (vecsnd Rs))
+
+  -- end fields 
+
+  σRT-component : ∀ (Rt : RTObj k)
+                  → [Rels^ k ,Rels] [ Functor.F₀ H* Rt , Functor.F₀ K* Rt ]
+
+  σRT-component Rt@(RT[ F1 , F2 , F* ]) =
+    let σ1F1 : NaturalTransformation (Functor.F₀ H1 F1) (Functor.F₀ K1 F1)
+        σ1F1 = NaturalTransformation.η σ1 F1 
+        σ1F1-η : ∀ (Xs : Vec Set k) → Functor.F₀ (Functor.F₀ H1 F1) Xs → Functor.F₀ (Functor.F₀ K1 F1) Xs
+        σ1F1-η Xs = NaturalTransformation.η σ1F1 Xs
+        -- 
+        σ2F2 : NaturalTransformation (Functor.F₀ H2 F2) (Functor.F₀ K2 F2)
+        σ2F2 = NaturalTransformation.η σ2 F2 
+        σ2F2-η : ∀ (Xs : Vec Set k) → Functor.F₀ (Functor.F₀ H2 F2) Xs → Functor.F₀ (Functor.F₀ K2 F2) Xs
+        σ2F2-η Xs = NaturalTransformation.η σ2F2 Xs
+        
+     in ntHelper
+       (record { η = λ Rs → RM[ σ1F1-η (vecfst Rs)  , σ2F2-η (vecsnd Rs) , σ-preserves Rt Rs ] 
+               ; commute = λ fs → (NaturalTransformation.commute σ1F1 (vecmfst fs)) , ( (NaturalTransformation.commute σ2F2 (vecmsnd fs)))
+               })
+
+  σRT-commute : ∀ {Rt St : Category.Obj (RTCat k)} (d : RTMorph Rt St )
+                → [Rels^ k ,Rels] [ 
+                    [Rels^ k ,Rels] [ σRT-component St ∘ Functor.F₁ H* d ] 
+                    ≈ [Rels^ k ,Rels] [ Functor.F₁ K* d ∘ σRT-component Rt ] 
+                ]
+  σRT-commute {Rt} {St} d@(RTM[ d1 , d2 , d-resp ]) =
+              NaturalTransformation.commute σ1 d1 , NaturalTransformation.commute σ2 d2 
+
+  σRT : NaturalTransformation H.H* K.H*
+  σRT = ntHelper (record { η = σRT-component  ; commute = σRT-commute })
+  
+
+
+idHRTMorph : ∀ {k : ℕ} {H : HRTObj k} → HRTMorph H H
+idHRTMorph {H} = record { σ1 = idnat ; σ2 = idnat ; σ-preserves = λ Rt Rs xy∈H*Rt-Rs → xy∈H*Rt-Rs } 
+
+composeHRTMorph : ∀ {k} {H K L : HRTObj k} →
+                  HRTMorph K L → HRTMorph H K → HRTMorph H L
+composeHRTMorph m@(HRTM[ σ1 , σ2 , σ-preserves ]) m'@(HRTM[ σ1' , σ2' , σ'-preserves ])
+                = HRTM[ (σ1 ∘v σ1') , (σ2 ∘v σ2') , (λ Rt Rs xy∈HRtRs → σ-preserves Rt Rs (σ'-preserves Rt Rs xy∈HRtRs)) ] 
+
+
+HRTCat : ℕ → Category (lsuc lzero) (lsuc lzero) (lsuc lzero)
+HRTCat k = record
+             { Obj = HRTObj k
+             ; _⇒_ = HRTMorph
+             ; _≈_ = λ {H} {K} m m' → (HRTMorph.σ1 m ≈ HRTMorph.σ1 m') ×' ( (HRTMorph.σ2 m ≈ HRTMorph.σ2 m') )  
+             ; id = idHRTMorph
+             ; _∘_ = composeHRTMorph
+             ; assoc = ≡.refl , ≡.refl
+             ; sym-assoc = ≡.refl , ≡.refl
+             ; identityˡ = ≡.refl , ≡.refl
+             ; identityʳ = ≡.refl , ≡.refl
+             ; identity² = ≡.refl , ≡.refl
+             ; equiv = record { refl = ≡.refl , ≡.refl
+                              ; sym = λ { (e1 , e2) → (≡.sym e1) , (≡.sym e2) } 
+                              ; trans = λ { (f1≈g1 , f2≈g2) (g1≈h1 , g2≈h2) → ≡.trans  f1≈g1 g1≈h1 , ≡.trans f2≈g2 g2≈h2  } } 
+             ; ∘-resp-≈ =
+               λ { {f = f} {h} {g} {i} (f1≈h1 , f2≈h2) (g1≈i1 , g2≈i2)
+                   → (∘-resp-≈ {f = σ1 f} {σ1 h} {σ1 g} {σ1 i} f1≈h1 g1≈i1)
+                   , (∘-resp-≈ {f = σ2 f} {σ2 h} {σ2 g} {σ2 i} f2≈h2 g2≈i2) } 
+             } 
+             where open Category ([[ [Sets^ k ,Sets] ,  [Sets^ k ,Sets] ]])
+                   open HRTMorph using (σ1 ; σ2)
+
+
+HRTEndo-map-component : ∀ {k} {H K : HRTObj k} → HRTMorph H K
+                        → (Rt : RTObj k)
+                        → RTMorph (Functor.F₀ (HRTObj.HEndo H) Rt) (Functor.F₀ (HRTObj.HEndo K) Rt)
+HRTEndo-map-component m@(HRTM[ σ1 , σ2 , σ-preserves ]) Rt@(RT[ F1 , F2 , F* ]) =
+  RTM[ (NaturalTransformation.η σ1 F1) , NaturalTransformation.η σ2 F2 , (λ {Rs} → σ-preserves Rt Rs ) ] 
+
+
+HRTEndo-map : ∀ {k} {H K : HRTObj k} → HRTMorph H K
+              → [[ RTCat k , RTCat k ]]
+                   [ HRTObj.HEndo H , HRTObj.HEndo K ]
+HRTEndo-map m@(HRTM[ σ1 , σ2 , σ-preserves ]) =
+  ntHelper (record { η = HRTEndo-map-component m
+                   ; commute =
+                        λ { RTM[ d1 , d2 , _ ] → (NaturalTransformation.commute σ1 d1) ,
+                                                NaturalTransformation.commute σ2 d2 } })
+         
+
+-- embed HRT into category of endofunctors on RT k 
+embedHRT : ∀ {k} → Functor (HRTCat k) ([[ RTCat k , RTCat k ]])
+embedHRT = record
+             { F₀ = HRTObj.HEndo
+             ; F₁ = HRTEndo-map
+             ; identity = ≡.refl , ≡.refl
+             ; homomorphism = ≡.refl , ≡.refl
+             ; F-resp-≈ = λ { (f1≈g1 , f2≈g2) → f1≈g1 , f2≈g2 } 
+             } 
+
+
+
+-- can we also go in the other direction? 
+-- i.e., get HRTObj from endofunctor on RT? 
 {-
 
--- This is slightly off .. H* should be a functor from RT k to [Rels^k , Rels]
-record HRTObj* {k : ℕ} (H1 H2 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) : Set₁ where
-  open RelObj
-  field
-    H* : Functor [Rels^ k ,Rels] [Rels^ k ,Rels]
 
-    -- -- these use RTObj -- need to update to use RTObj* 
-    -- H*-preserves-1 : ∀ (RT : RTObj k) → (F* : Functor (Sets^ k) Sets)  → (Rs : Vec RelObj k)
-    --                  → fst (Functor.F₀ (Functor.F₀ H* (RTObj.F* RT)) Rs)
-    --                  ≡ Functor.F₀ (Functor.F₀ H1 (RTObj.F1 RT)) (vecfst Rs)
-
-    -- H*-preserves-2 : ∀ (RT : RTObj k) → (F* : Functor (Sets^ k) Sets)  → (Rs : Vec RelObj k)
-    --                  → snd (Functor.F₀ (Functor.F₀ H* (RTObj.F* RT)) Rs)
-    --                  ≡ Functor.F₀ (Functor.F₀ H2 (RTObj.F2 RT)) (vecsnd Rs)
-
-
-    H*-preserves-1 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2) → (Rs : Vec RelObj k)
-                     → fst (Functor.F₀ (Functor.F₀ H* (RTObj*.F* F*)) Rs)
-                     ≡ Functor.F₀ (Functor.F₀ H1 F1) (vecfst Rs)
-
-    H*-preserves-2 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2) → (Rs : Vec RelObj k)
-                     → snd (Functor.F₀ (Functor.F₀ H* (RTObj*.F* F*)) Rs)
-                     ≡ Functor.F₀ (Functor.F₀ H2 F2) (vecsnd Rs)
-
-
-
-  endoRT₀ : RTObj k → RTObj k 
-  endoRT₀ RT[ F1 , F2 , F* ] =
-    let RT* : RTObj* (Functor.F₀ H1 F1) (Functor.F₀ H2 F2)
-        RT* = record { F* = Functor.F₀ H* (RTObj*.F* F*) ; F*-preserves-1 = H*-preserves-1 F1 F2 F* ; F*-preserves-2 = H*-preserves-2 F1 F2 F* }
-
-    in RT[ Functor.F₀ H1 F1 , Functor.F₀ H2 F2 , RT* ] 
-
-    -- record { F1 = Functor.F₀ H1 F1
-    --        ; F2 = Functor.F₀ H2 F2
-    --        ; F* = {! RTObj.F* (endoRT₀ rt)!} } 
-  -- RTObj.F* (endoRT₀ rt) } 
-
-  -- this constitutes an endofunctor on RT k
-  endo : Functor (RTCat k) (RTCat k)
-  endo = record
-           { F₀ = endoRT₀  
-           ; F₁ = {!!}
-           ; identity = {!!}
-           ; homomorphism = {!!}
-           ; F-resp-≈ = {!!}
-           } 
--}
-
-
-
-record HRTObj* {k : ℕ} (H1 H2 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets]) : Set₁ where
-  open RelObj
-  field
-    H* : Functor (RTCat k) [Rels^ k ,Rels]
-
-    -- first 'implicit' bullet point 
-    H*-preserves-1 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2) → (Rs : Vec RelObj k)
-                     → fst (Functor.F₀ (Functor.F₀ H* RT[ F1 , F2 , F* ]) Rs)
-                     ≡ Functor.F₀ (Functor.F₀ H1 F1) (vecfst Rs)
-    -- first 'implicit' bullet point 
-    H*-preserves-2 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2) → (Rs : Vec RelObj k)
-                     → snd (Functor.F₀ (Functor.F₀ H* RT[ F1 , F2 , F* ]) Rs)
-                     ≡ Functor.F₀ (Functor.F₀ H2 F2) (vecsnd Rs)
-
-
-    -- second 'implicit' bullet point 
-    H*-preserves-m1 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2)
-                     → {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ] )
-                     → ∀ {x y} → x Het.≅ y
-                     → mfst (Functor.F₁ (Functor.F₀ H* RT[ F1 , F2 , F* ]) ms) x
-                     Het.≅ Functor.F₁ (Functor.F₀ H1 F1) (vecmfst ms) y
-    -- second 'implicit' bullet point
-    H*-preserves-m2 : ∀ (F1 F2 : Functor (Sets^ k) Sets) (F* : RTObj* F1 F2) 
-                     → {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ] )
-                     → ∀ {x y} → x Het.≅ y
-                     → msnd (Functor.F₁ (Functor.F₀ H* RT[ F1 , F2 , F* ]) ms) x
-                     Het.≅ Functor.F₁ (Functor.F₀ H2 F2) (vecmsnd ms) y
-
-
-    -- third bullet point, part 1 
-    H*-preserves-nat1 : ∀  (Rt St : RTObj k) → (rtm : RTMorph Rt St)
-                      → ∀ {Rs : Vec RelObj k} {x y} → x Het.≅ y
-                      → mfst (NaturalTransformation.η (Functor.F₁ H* rtm) Rs) x
-                        Het.≅ NaturalTransformation.η (Functor.F₁ H1 (δ₁ rtm)) (vecfst Rs) y
-
-    -- third bullet point, part 2
-    H*-preserves-nat2 : ∀  (Rt St : RTObj k) → (m : RTMorph Rt St)
-                      → ∀ {Rs : Vec RelObj k} {x y} → x Het.≅ y
-                      → msnd (NaturalTransformation.η (Functor.F₁ H* m) Rs) x
-                        Het.≅ NaturalTransformation.η (Functor.F₁ H2 (δ₂ m)) (vecsnd Rs) y
-
-
-  endoRT₀ : RTObj k → RTObj k 
-  endoRT₀ rt@(RT[ F1 , F2 , F* ]) =
-    let RT* : RTObj* (Functor.F₀ H1 F1) (Functor.F₀ H2 F2)
-        RT* = record { F* = Functor.F₀ H* rt
-                     ; F*-preserves-1 = H*-preserves-1 F1 F2 F*
-                     ; F*-preserves-2 = H*-preserves-2 F1 F2 F*
-                     ; F*-preserves-m1 = H*-preserves-m1 F1 F2 F* 
-                     ; F*-preserves-m2 = H*-preserves-m2 F1 F2 F* }
-
-    in RT[ Functor.F₀ H1 F1 , Functor.F₀ H2 F2 , RT* ]
-
-  {- [ ]TODO 
-     - Need to figure out what other assumptions are needed to complete this proof of endoRT₁ 
-   -}
-
-  endoRT₁ : ∀ {Rt St : RTObj k} → RTCat k [ Rt , St ] → RTCat k [ endoRT₀ Rt , endoRT₀ St ]
-  endoRT₁ {Rt} {St} RTM[ d1 , d2 , d-resp ] = RTM[ Functor.F₁ H1 d1 , Functor.F₁ H2 d2 , resp ]
-    where
-          -- this is implied by the third bullet point of Definition 3.6 
-          -- i.e., H*-preserves-nat-
-          resp : ∀ (Rs : Vec RelObj k) → RTMorph-resp (endoRT₀ Rt) (endoRT₀ St) (Functor.F₁ H1 d1) (Functor.F₁ H2 d2) Rs
-          resp Rs {x} {y} x,y∈H*Rt*Rs = {!    !} 
-
-          endoH-St* : Functor (Rels^ k) Rels
-          endoH-St* = (RTObj*.F* (RTObj.F* (endoRT₀ St)))
-
-          -- goal : : rel (Functor.F₀ H*St* Rs)
-                    -- (get-comp-1 (endoRT₀ Rt) (endoRT₀ St) (Functor.F₁ H1 d1) Rs x)
-                    -- (get-comp-2 (endoRT₀ Rt) (endoRT₀ St) (Functor.F₁ H2 d2) Rs y)
-
-
--- get-comp-1 turns a component of d1 into a function from fst (Rt* Rs) → fst (St* Rs)
--- get-comp-1 : ∀ {k : ℕ} → (H K : RTObj k) → (d1 : NaturalTransformation (RTObj.F1 H) (RTObj.F1 K)) 
---          → (Rs : Vec RelObj k)
---          → RelObj.fst (RTObj.F*₀ H Rs)
---          → RelObj.fst (RTObj.F*₀ K Rs)
+-- Goal: REL0 (Functor.F₀ (Functor.₀ π₁RT (Functor.₀ (H ∘F idRTFunctor) (RTObj.F1 Rt))) (vecfst Rs))
+--            (Functor.F₀ (Functor.₀ π₂RT (Functor.₀ (H ∘F idRTFunctor) (RTObj.F2 Rt))) (vecsnd Rs))
 
     -- F*Rel : ∀ (Rs : Vec RelObj k) → REL0 (F1.₀ (vecfst Rs)) (F2.₀ (vecsnd Rs))
 
-    -- H*-preserves-nat1 : ∀  (Rt St : RTObj k) → (m : RTMorph Rt St)
-    --                   → ∀ {Rs : Vec RelObj k} {x y} → x Het.≅ y
-    --                   → mfst (NaturalTransformation.η (Functor.F₁ H* m) Rs) x
-    --                     Het.≅ NaturalTransformation.η (Functor.F₁ H1 (δ₁ m)) (vecfst Rs) y
 
-      -- need to use H*-preserves-nat1  where m = RTM[ d1 , d2 , d-resp ] and
-      -- 
+-- normalized Goal: REL0
+--   (Functor.F₀ (RTObj.F1 (Functor.F₀ H (idRT F1))) (vmap fst Rs))
+--   (Functor.F₀ (RTObj.F2 (Functor.F₀ H (idRT F2))) (vmap snd Rs))
 
 
-          rmorph : ∀ (Rs : Vec RelObj k) → Rels [ Functor.F₀ (Functor.F₀ H* Rt) Rs , Functor.F₀ (Functor.F₀ H* St) Rs ]
-          rmorph = NaturalTransformation.η (Functor.F₁ H* RTM[ d1 , d2 , d-resp ]) 
-
-          -- p : ∀ (Rs  : Vec RelObj k) → {!preservesRelObj (Functor.F₀ (Functor.F₀ H* Rt) Rs) (Functor.F₀ (Functor.F₀ H* St) Rs) (mfst (rmorph Rs)) (msnd (rmorph Rs))       !} 
-          p : ∀ (Rs  : Vec RelObj k) → ∀ {x y} → rel ((Functor.F₀ (Functor.F₀ H* Rt) Rs)) x y
-              → rel ( (Functor.F₀ (Functor.F₀ H* St) Rs)) (mfst (rmorph Rs) x) (msnd (rmorph Rs) y)
-          p Rs = RelMorph.preserves (rmorph Rs)
+-- H1As : Functor.F₀ (RTObj.F1 (Functor.F₀ H RT[ RTObj.F1 Rt , RTObj.F1 Rt , idRT*Components (RTObj.F1 Rt) ])) (vmap fst Rs)
+-- H2Bs : Functor.F₀ (RTObj.F2 (Functor.F₀ H RT[ RTObj.F2 Rt , RTObj.F2 Rt , idRT*Components (RTObj.F2 Rt) ])) (vmap snd Rs)
 
 
-
--- preservesRelObj R R' f g = preservesRel (RelObj.rel R) (RelObj.rel R') f g 
--- preservesRel R R' f g = ∀ {x y} → R x y → R' (f x) (g y)
-    -- preserves : preservesRelObj R S mfst msnd 
-    
-
-  -- this constitutes an endofunctor on RT k
-  endo : Functor (RTCat k) (RTCat k)
-  endo = record
-           { F₀ = endoRT₀  
-           ; F₁ = {!endoRT₁ !}
-           ; identity = {!!}
-           ; homomorphism = {!!}
-           ; F-resp-≈ = {!!}
-           } 
+    -- H*RTRel : ∀ (Rt : RTObj k) (Rs : Vec RelObj k)
+    --           → REL0 (Functor.F₀ (Functor.F₀ H1 (RTObj.F1 Rt)) (vecfst Rs))
+    --                  (Functor.F₀ (Functor.F₀ H2 (RTObj.F2 Rt)) (vecsnd Rs))
+    -- F*Rel-preserves : ∀ {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ])
+    --                   → preservesRel (F*Rel Rs) (F*Rel Ss) (F1.₁ (vecmfst ms)) (F2.₁ (vecmsnd ms))
 
 
 
-record HRTObj (k : ℕ) : Set₁ where
-  field
-    H1 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets] 
-    H2 : Functor [Sets^ k ,Sets] [Sets^ k ,Sets] 
-
-    H* : HRTObj* H1 H2 
 
 
-record HRTMorph {k : ℕ} (H K : HRTObj k) : Set₁ where
-  constructor HRTM[_,_]
-  private module H = HRTObj H
-  private module K = HRTObj K 
-  field
-    σ1 : NaturalTransformation H.H1 K.H1
-    σ2 : NaturalTransformation H.H2 K.H2
-
-    -- do we need any other conditions ? 
-    -- definition 3.7 says that σ_F = (σ1_F1 , σ2_F2) (where F : RT_k)
-    -- should be a natural transformation from
-    --
-    -- H.H* F to K.H* F  in [Rel^k , Rel]
-    -- so for every Rs : Vec RelObj k
-    --
-    -- we have (σ1_F1 As , σ2_F2 Bs) is a RelMorph 
-    -- from H* F Rs
-    -- to   K* F Rs
-    -- 
-    
+toHRT-obj*Rel : ∀ {k} (H : Category.Obj [[ RTCat k , RTCat k ]])
+                  (Rt : RTObj k) (Rs : Vec RelObj k)
+                  → REL0 (Functor.F₀ (Functor.F₀ (π₁RT ∘F H ∘F idRTFunctor) (RTObj.F1 Rt)) (vecfst Rs))
+                         (Functor.F₀ (Functor.F₀ (π₂RT ∘F H ∘F idRTFunctor) (RTObj.F2 Rt)) (vecsnd Rs)) 
+toHRT-obj*Rel H Rt Rs x y = {!!} ×' {!!} 
 
 
--- category of ho relation transformers.
--- should be naturally isomorphic to
--- functor category [[ RT k , RT k ]] 
-HRTCat : ℕ → Category _ _ _
-HRTCat k = record
-               { Obj = HRTObj k
-               ; _⇒_ = HRTMorph
-               ; _≈_ = λ m m' → (HRTMorph.σ1 m ≈ HRTMorph.σ1 m') ×' ( (HRTMorph.σ2 m ≈ HRTMorph.σ2 m')) 
-               ; id = {!!}
-               ; _∘_ = {!!}
-               ; assoc = {!!}
-               ; sym-assoc = {!!}
-               ; identityˡ = {!!}
-               ; identityʳ = {!!}
-               ; identity² = {!!}
-               ; equiv = {!!}
-               ; ∘-resp-≈ = {!!}
-               }
-           where open Category ([[ [Sets^ k ,Sets] , [Sets^ k ,Sets] ]]) using (_≈_) 
+toHRT-obj* : ∀ {k} (H : Category.Obj [[ RTCat k , RTCat k ]])
+            → HRTObj* (π₁RT ∘F H ∘F idRTFunctor) (π₂RT ∘F H ∘F idRTFunctor)
+toHRT-obj* {k} H = record { H*RTRel = λ Rt Rs → {!toHRT-obj*Rel H Rt Rs!} 
+-- RTObj*Components.F*Rel (RTObj.F*Components {!Functor.F₀ H Rt!}) Rs
+
+-- HRTObj*.H*RTRel (HRTObj.H*Obj {!H!}) Rt Rs 
+-- RTObj*Components.F*Rel-preserves (record { F*Rel = {!!} ; F*Rel-preserves = {!!} }) {!!} {!!} {!!} 
+                        ; H*RTRel-preserves = {!!}
+                        ; H*RT-preserves = {!!} } 
+
+
+toHRT-obj : ∀ {k} → Category.Obj [[ RTCat k , RTCat k ]] → HRTObj k
+toHRT-obj {k} H = record { H1 = π₁RT ∘F H ∘F idRTFunctor  
+                         ; H2 =  π₂RT ∘F H ∘F idRTFunctor
+                         ; H*Obj = {!!} } 
+                         -- toHRT-obj* H } 
+
+
+-- can we get back an HRT obj from an endofunctor on RT k ? 
+toHRT : ∀ {k} → Functor ([[ RTCat k , RTCat k ]]) (HRTCat k) 
+toHRT {k} = record
+              { F₀ = toHRT-obj
+              ; F₁ = {!!}
+              ; identity = {!!}
+              ; homomorphism = {!!}
+              ; F-resp-≈ = {!!}
+              } 
+
 
 -}

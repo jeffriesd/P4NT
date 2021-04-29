@@ -32,10 +32,11 @@ open import Categories.Object.Terminal
 -------------------------------------------------------
 
 
+
+
 module RTEnvironments.Core {o l e : Level}
   (D : ℕ → Category o l e) 
-  (Dt : (k : ℕ) → Category.Obj (D k))
-  (Dtm : (k : ℕ) → {d : Category.Obj (D k)} → (D k) [ d , Dt k ])
+  (D⊤ : (k : ℕ) → Terminal (D k))
   where 
 
 
@@ -65,11 +66,11 @@ abstract
   -- -- the actual definition doesn't matter, so we can make it abstract 
   trivFVEnv : ∀ {k : ℕ} → FVar k → DObj k
   -- just use initial object here 
-  trivFVEnv {k} _ = Dt k
+  trivFVEnv {k} _ = Terminal.⊤ (D⊤ k)
 
   trivFVEnv-morph : ∀ {k} {φ ψ : FVar k} (fv : EnvFV)
                     → (D k) [ (fv φ) ,  (trivFVEnv ψ) ]
-  trivFVEnv-morph {k} _ = Dtm k 
+  trivFVEnv-morph {k} _ = Terminal.! (D⊤ k) 
 
 
 extendfv : ∀ {k} → EnvFV → FVar k → DObj k
@@ -172,6 +173,7 @@ extendfv-vec-preserves-tc-ext ρ φs Fs = ≡TC⇒≡TC-ext ρ (ρ [ φs :fvs= F
 
 
 record EnvMorph (ρ ρ' : Env) : Set (o ⊔ l ⊔ e) where
+  constructor EnvM[_,_] 
   field
     -- need proof that ∀ {k : ℕ} {t : TCVar k} (ρ.tc t ≡ ρ'.tc t)
     -- -- but how do we know when two functors are equal?
@@ -207,6 +209,21 @@ eqTC-ext {k} {ρ} {ρ'} record { eqTC = eqTC ; fv = fv } ψ = ≡.cong-app (cong
 _∘Env_ : ∀ {ρ ρ' ρ''} → EnvMorph ρ' ρ'' → EnvMorph ρ ρ' → EnvMorph ρ ρ''
 g ∘Env f = record { eqTC = ≡.trans (EnvMorph.eqTC f) (EnvMorph.eqTC g)
                   ; fv   = λ {k} φ → (D k) [ (EnvMorph.fv g φ) ∘ (EnvMorph.fv f φ) ]  }
+
+
+
+-- g φ : NaturalTransformation (ρ' φ) (ρ'' φ)
+-- f φ : NaturalTransformation (ρ  φ) (ρ'  φ)
+-- 
+-- (g ∘ f) φ : NaturalTransformation (ρ φ) (ρ'' φ)
+
+-- EnvMorph.fv acts as a functor (preserves composition), by definition of ∘Env 
+∘Env-homomorphism : ∀ {ρ ρ' ρ''} → (g : EnvMorph ρ' ρ'') → (f : EnvMorph ρ ρ')
+               → ∀ {k} (φ : FVar k)
+               → (D k) [ EnvMorph.fv (g ∘Env f) φ
+                    ≈ (D k) [ EnvMorph.fv g φ ∘ EnvMorph.fv f φ ]
+               ] 
+∘Env-homomorphism g f {k} φ = Category.Equiv.refl (D k) 
 
 
 -- identity morphism for set environments
@@ -280,6 +297,31 @@ mkIdTCNT-eq : ∀ {k} {ρ ρ' : Env}
                 → (D k) [ mkIdTCNT f φ ≈ mkIdTCNT g φ ]
 mkIdTCNT-eq {k} record { eqTC = ≡.refl ; fv = _ } record { eqTC = ≡.refl ; fv = _ } φ = Category.Equiv.refl (D k)
 
+
+
+-- -- [ ] TODO - redefine VarSem-FV and TCSem-FV in terms of these functors 
+-- for each variable of arity k, we have a functor from category of environments
+-- to category (D k) interpreting k-ary variables
+--
+-- D k will be either [Sets^ k ,Sets] or RTCat k 
+ApplyEnv-FV : ∀ {k} (φ : FVar k) → Functor EnvCat (D k)
+ApplyEnv-FV {k} φ = record
+               { F₀ = λ ρ → Env.fv ρ φ
+               ; F₁ = λ f → EnvMorph.fv f φ
+               ; identity = Category.Equiv.refl (D k)
+               ; homomorphism = Category.Equiv.refl (D k)
+               ; F-resp-≈ = λ f≈g → f≈g {k} {φ}
+               } 
+
+-- we can do the same for TC variables 
+ApplyEnv-TC : ∀ {k} (φ : TCVar k) → Functor EnvCat (D k)
+ApplyEnv-TC {k} φ = record
+               { F₀ = λ ρ → Env.tc ρ φ
+               ; F₁ = λ f → mkIdTCNT f φ
+               ; identity = Category.Equiv.refl (D k)
+               ; homomorphism = λ {X} {Y} {Z} {f} {g} → mkIdTCNT-comp f g φ
+               ; F-resp-≈ = λ {X} {Y} {f} {g} f≈g → mkIdTCNT-eq f g φ 
+               } 
 
 
 

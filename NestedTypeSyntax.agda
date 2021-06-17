@@ -796,6 +796,7 @@ mutual
                              → Γ ≀ Φ ⊢ F [ φ :=[ αs ] H ]
   -- so-subst-preserves-typing {k = zero} {φ = φ ^F 0} {αs = []} ⊢F ⊢H = fo-subst-preserves-typing ⊢F ⊢H
 
+
   so-subst-preserves-typing {k = k} 𝟘-I ⊢H = 𝟘-I
   so-subst-preserves-typing {k = k} 𝟙-I ⊢H = 𝟙-I
   so-subst-preserves-typing {k = k} (Nat-I ⊢F ⊢G) ⊢H = Nat-I ⊢F ⊢G

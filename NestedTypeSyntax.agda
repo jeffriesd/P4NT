@@ -20,6 +20,7 @@ open import Level using (Lift)
 open import Utils
 
 
+
 -- _=s=_ : (x y : String) → Set 
 -- x =s= y = primStringEquality x y ≡ true 
 
@@ -65,6 +66,7 @@ suc-cong2 refl = refl
 -- negation distributes over injective functions 
 ¬-cong : ∀ {A B : Set} {p q : A} {f : A → B} → (¬ (p ≡ q)) → (inj : (f p ≡ f q) → p ≡ q ) → (¬ (f p ≡ f q))
 ¬-cong ¬p inj fp≡fq = ¬p (inj fp≡fq)
+
 
 
 -- decidable equality for natural numbers 
@@ -172,7 +174,7 @@ data _∋_ : ∀ {V : ℕ → Set} {k : ℕ} → TypeContext V → V k → Set w
             → (Γ ,, v) ∋ v
 
   -- names are different 
-  lookupS : ∀ {V : ℕ → Set} {k : ℕ} {Γ : TypeContext V} {v v' : V k}
+  lookupDiffId : ∀ {V : ℕ → Set} {k : ℕ} {Γ : TypeContext V} {v v' : V k}
             → v ≢ v' -- later variables 'overwrite' earlier ones
             → Γ ∋ v
             → (Γ ,, v') ∋ v
@@ -204,7 +206,7 @@ diffArityTC : ∀ {k j : ℕ} (Γ : TCCtx) → (v : TCVar k) → (v' : TCVar j)
             → (Γ ,, v) ∋ v'
             → Γ ∋ v'
 diffArityTC Γ (v ^T k) (.v ^T .k) k≢j lookupZ = exFalso' k≢j
-diffArityTC Γ (v ^T k) (v' ^T .k) k≢j (lookupS _ _) = exFalso' k≢j
+diffArityTC Γ (v ^T k) (v' ^T .k) k≢j (lookupDiffId _ _) = exFalso' k≢j
 diffArityTC Γ (v ^T k) (v' ^T j) k≢j (lookupDiffArity _ Γ∋v') = Γ∋v'
 
 diffIdTC : ∀ {k : ℕ} (Γ : TCCtx) → (v v' : Id)
@@ -212,7 +214,7 @@ diffIdTC : ∀ {k : ℕ} (Γ : TCCtx) → (v v' : Id)
              → (Γ ,, (v ^T k)) ∋ (v' ^T k)
              → Γ ∋ (v' ^T k)
 diffIdTC Γ v .v v≢v' lookupZ = exFalso' v≢v'
-diffIdTC Γ v v' v≢v' (lookupS _ Γ∋v') = Γ∋v'
+diffIdTC Γ v v' v≢v' (lookupDiffId _ Γ∋v') = Γ∋v'
 diffIdTC Γ v v' v≢v' (lookupDiffArity _ Γ∋v') = Γ∋v'
 
 diffArityFun : ∀ {k j : ℕ} {Φ : FunCtx} → {v : FVar k} → {v' : FVar j}
@@ -220,7 +222,7 @@ diffArityFun : ∀ {k j : ℕ} {Φ : FunCtx} → {v : FVar k} → {v' : FVar j}
             → (Φ ,, v) ∋ v'
             → Φ ∋ v'
 diffArityFun k≢j lookupZ = exFalso' k≢j
-diffArityFun k≢j (lookupS _ _) = exFalso' k≢j
+diffArityFun k≢j (lookupDiffId _ _) = exFalso' k≢j
 diffArityFun k≢j (lookupDiffArity _ Φ∋v') = Φ∋v'
 
 diffIdFun : ∀ {k : ℕ} {Φ : FunCtx} → {v v' : Id}
@@ -228,7 +230,7 @@ diffIdFun : ∀ {k : ℕ} {Φ : FunCtx} → {v v' : Id}
              → (Φ ,, (v ^F k)) ∋ (v' ^F k)
              → Φ ∋ (v' ^F k)
 diffIdFun v≢v' lookupZ = exFalso' v≢v'
-diffIdFun v≢v' (lookupS _ Φ∋v') = Φ∋v'
+diffIdFun v≢v' (lookupDiffId _ Φ∋v') = Φ∋v'
 diffIdFun v≢v' (lookupDiffArity _ Φ∋v') = Φ∋v'
 
 
@@ -242,7 +244,7 @@ lookupTC (Γ ,, (φ ^T k)) (ψ ^T j) with eqNat k j | φ ≟ ψ | lookupTC Γ (�
 ... | no k≢j | _ | no ¬p = false because (ofⁿ (λ Γ,φ∋ψ → ¬p (diffArityTC Γ (φ ^T k) (ψ ^T j) k≢j  Γ,φ∋ψ)))
 -- ... | no k≢j | yes refl = {!   !}
 ... | yes refl | .true because ofʸ refl | _ = true because (ofʸ lookupZ)
-... | yes refl | no ¬p | .true because ofʸ Γ∋ψ = true because (ofʸ (lookupS (λ ψ≡φ → ¬p (cong-^T (sym ψ≡φ))) Γ∋ψ)) -- true because (ofʸ (lookupDiffArity (≢-sym k≢j) Γ∋ψ))
+... | yes refl | no ¬p | .true because ofʸ Γ∋ψ = true because (ofʸ (lookupDiffId (λ ψ≡φ → ¬p (cong-^T (sym ψ≡φ))) Γ∋ψ)) -- true because (ofʸ (lookupDiffArity (≢-sym k≢j) Γ∋ψ))
 ... | yes refl | no ¬p | .false because ofⁿ ¬q = false because (ofⁿ (λ Γ,φ∋ψ → ¬q (diffIdTC Γ φ ψ ¬p Γ,φ∋ψ)))
 
 lookupFV : ∀ {k : ℕ}  → (Γ : FunCtx) → (v : FVar k) → Dec (Γ ∋ v)
@@ -251,7 +253,7 @@ lookupFV (Γ ,, (φ ^F k)) (ψ ^F j) with eqNat k j | φ ≟ ψ | lookupFV Γ (�
 ... | no k≢j | _ | yes Γ∋ψ = true because (ofʸ (lookupDiffArity (≢-sym k≢j) Γ∋ψ))
 ... | no k≢j | _ | no ¬p = false because (ofⁿ (λ Γ,φ∋ψ → ¬p (diffArityFun k≢j Γ,φ∋ψ)))
 ... | yes refl | .true because ofʸ refl | _ = true because (ofʸ lookupZ)
-... | yes refl | no ¬p | .true because ofʸ Γ∋ψ = true because (ofʸ (lookupS (λ ψ≡φ → ¬p (cong-^F (sym ψ≡φ))) Γ∋ψ)) -- true because (ofʸ (lookupDiffArity (≢-sym k≢j) Γ∋ψ))
+... | yes refl | no ¬p | .true because ofʸ Γ∋ψ = true because (ofʸ (lookupDiffId (λ ψ≡φ → ¬p (cong-^F (sym ψ≡φ))) Γ∋ψ)) -- true because (ofʸ (lookupDiffArity (≢-sym k≢j) Γ∋ψ))
 ... | yes refl | no ¬p | .false because ofⁿ ¬q = false because (ofⁿ (λ Γ,φ∋ψ → ¬q (diffIdFun ¬p Γ,φ∋ψ)))
 
 
@@ -337,7 +339,7 @@ data _≀_⊢_ : TCCtx → FunCtx → TypeExpr → Set where
                 → (Γ ,, α) ∋ φ
 ∋-resp-weakTC (α ^T n) (φ ^T m) Γ∋φ with eqNat m n | α ≟ φ
 ... | .true because ofʸ refl | .true because ofʸ refl = lookupZ
-... | .true because ofʸ refl | .false because ofⁿ α≢φ = lookupS (≢-TCVar φ α (≢-sym α≢φ)) Γ∋φ
+... | .true because ofʸ refl | .false because ofⁿ α≢φ = lookupDiffId (≢-TCVar φ α (≢-sym α≢φ)) Γ∋φ
 ... | .false because ofⁿ m≢n | _                      = lookupDiffArity m≢n Γ∋φ
 
 
@@ -347,7 +349,7 @@ data _≀_⊢_ : TCCtx → FunCtx → TypeExpr → Set where
                 → (Φ ,, α) ∋ φ
 ∋-resp-weakFV (α ^F n) (φ ^F m) Φ∋φ with eqNat m n | α ≟ φ
 ... | .true because ofʸ refl | .true because ofʸ refl = lookupZ
-... | .true because ofʸ refl | .false because ofⁿ α≢φ = lookupS (≢-FVar φ α (≢-sym α≢φ)) Φ∋φ
+... | .true because ofʸ refl | .false because ofⁿ α≢φ = lookupDiffId (≢-FVar φ α (≢-sym α≢φ)) Φ∋φ
 ... | .false because ofⁿ m≢n | _                      = lookupDiffArity m≢n Φ∋φ
 
 ∋-resp-weakFV-vec :  ∀ {m n k : ℕ} {Φ : FunCtx} (αs : Vec (FVar k) n)
@@ -369,7 +371,7 @@ FunCtx-∋-weaken-,++-mid : ∀ {k n m j} → {Φ : FunCtx} → (φs : Vec (FVar
                       → ((Φ ,, ψ) ,++ φs) ∋ p
 FunCtx-∋-weaken-,++-mid [] ψ p Φ,φs∋ψ = ∋-resp-weakFV ψ p Φ,φs∋ψ
 FunCtx-∋-weaken-,++-mid (φ ∷ φs) ψ .φ lookupZ = lookupZ
-FunCtx-∋-weaken-,++-mid (φ ∷ φs) ψ p (lookupS p≢φ Φ,φs∋ψ) = lookupS p≢φ (FunCtx-∋-weaken-,++-mid φs ψ p Φ,φs∋ψ)
+FunCtx-∋-weaken-,++-mid (φ ∷ φs) ψ p (lookupDiffId p≢φ Φ,φs∋ψ) = lookupDiffId p≢φ (FunCtx-∋-weaken-,++-mid φs ψ p Φ,φs∋ψ)
 FunCtx-∋-weaken-,++-mid (φ ∷ φs) ψ p (lookupDiffArity m≢k Φ,φs∋ψ) = lookupDiffArity m≢k (FunCtx-∋-weaken-,++-mid φs ψ p Φ,φs∋ψ)
 
 
@@ -378,7 +380,7 @@ FunCtx-∋-++ : ∀ {k j p : ℕ} (αs : Vec (FVar 0) k) (βs : Vec (FVar 0) j) 
            → (( ∅fv ,++ αs ) ,++ βs) ∋ φ
 FunCtx-∋-++ [] βs φ ∋φ = ∋φ
 FunCtx-∋-++ (α ∷ αs) βs .α lookupZ = FunCtx-∋-weaken-,++ βs α lookupZ
-FunCtx-∋-++ (α ∷ αs) βs φ (lookupS φ≢α ∋φ) = FunCtx-∋-weaken-,++-mid βs α φ (FunCtx-∋-++ αs βs φ ∋φ)
+FunCtx-∋-++ (α ∷ αs) βs φ (lookupDiffId φ≢α ∋φ) = FunCtx-∋-weaken-,++-mid βs α φ (FunCtx-∋-++ αs βs φ ∋φ)
 FunCtx-∋-++ (α ∷ αs) βs φ (lookupDiffArity p≢0 ∋φ) = FunCtx-∋-weaken-,++-mid βs α φ (FunCtx-∋-++ αs βs φ ∋φ)
 
 
@@ -408,42 +410,42 @@ mutual
   Nat^ βs [ F , G ] [ α := H ] = Nat^ βs [ F  , G ]
   (F + G) [ α := H ] = (F [ α := H ]) + (G [ α := H ])
   (F × G) [ α := H ] = (F [ α := H ]) × (G [ α := H ])
-  AppT φ [ Gs ] [ α := H ] = AppT φ [ replaceVec Gs α H ]
+  AppT φ [ Gs ] [ α := H ] = AppT φ [ substVec Gs α H ]
 
 
   -- AppF φ ^F 0     [ [] ] [ α ^F 0 := H ] with φ ≟ α
   -- ... | .true because ofʸ φ≡α = H
   -- ... | .false because ofⁿ ¬φ≡α = AppF φ ^F 0 [ [] ]
-  -- AppF φ ^F suc k [ Gs ] [ α := H ] = AppF φ ^F suc k [ replaceVec Gs α H ]
+  -- AppF φ ^F suc k [ Gs ] [ α := H ] = AppF φ ^F suc k [ substVec Gs α H ]
 
 
   AppF φ ^F k [ Gs ] [ (α ^F j) := H ] with eqNat k j | φ ≟ α 
   ... | yes refl | yes refl = H 
-  ... | _ | _  = AppF (φ ^F k) [ replaceVec Gs (α ^F j) H ] 
+  ... | _ | _  = AppF (φ ^F k) [ substVec Gs (α ^F j) H ] 
 
   -- no recursive substitution of G because
   -- it only contains functorial variables that are bound by μ (βs and φ)
-  (μ φ [λ βs , G ] Ks) [ α := H ] = μ φ [λ βs , G ] (replaceVec Ks α H)
+  (μ φ [λ βs , G ] Ks) [ α := H ] = μ φ [λ βs , G ] (substVec Ks α H)
 
   -- apply substitution to a vector of types.
   -- using Vec.map results in failure of termination check for Agda
-  replaceVec : ∀ {n : ℕ} → Vec TypeExpr n → FVar 0 → TypeExpr → Vec TypeExpr n
-  replaceVec [] α H = []
-  replaceVec (G ∷ Gs) α H = (G [ α := H ]) ∷ replaceVec Gs α H
+  substVec : ∀ {n : ℕ} → Vec TypeExpr n → FVar 0 → TypeExpr → Vec TypeExpr n
+  substVec [] α H = []
+  substVec (G ∷ Gs) α H = (G [ α := H ]) ∷ substVec Gs α H
 
 
 
 
 
 mutual
-  replaceVec-preserves : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
+  substVec-preserves : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
                         → (H : TypeExpr)
                         → (Gs : Vec TypeExpr k)
                         → Γ ≀ Φ ⊢ H
                         → foreach (λ G → Γ ≀ Φ ⊢ G [ α := H ]) Gs
-                        → foreach (λ G → Γ ≀ Φ ⊢ G) (replaceVec Gs α H)
-  replaceVec-preserves H [] ⊢H ⊢Gs = bigtt
-  replaceVec-preserves H (G ∷ Gs) ⊢H (⊢G[α:=H] , ⊢Gs) = ⊢G[α:=H] , replaceVec-preserves H Gs ⊢H ⊢Gs
+                        → foreach (λ G → Γ ≀ Φ ⊢ G) (substVec Gs α H)
+  substVec-preserves H [] ⊢H ⊢Gs = bigtt
+  substVec-preserves H (G ∷ Gs) ⊢H (⊢G[α:=H] , ⊢Gs) = ⊢G[α:=H] , substVec-preserves H Gs ⊢H ⊢Gs
 
   -- {-# TERMINATING #-}
   foreach-preserves-subst : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
@@ -455,7 +457,7 @@ mutual
   -- foreach-preserves-subst H Gs ⊢H ⊢Gs = foreach-preserves (λ G ⊢G → fo-subst-preserves-typing G H ⊢G ⊢H) Gs ⊢Gs
   -- -- -- ^ this generalized version doesn't pass termination checking for some reason
   foreach-preserves-subst H [] ⊢H ⊢Gs = bigtt
-  foreach-preserves-subst H (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = (fo-subst-preserves-typing G H ⊢G ⊢H) , foreach-preserves-subst H Gs ⊢H ⊢Gs
+  foreach-preserves-subst H (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = (fo-subst-preserves-typing ⊢G ⊢H) , foreach-preserves-subst H Gs ⊢H ⊢Gs
 
   foreach-preserves-∋ : ∀ {k : ℕ}  {Φ : FunCtx} {α : FVar 0}
                         → (βs : Vec (FVar 0) k)
@@ -465,49 +467,48 @@ mutual
 
   -- is this really a congruence? maybe give it a different name 
   -- 
-  -- TODO this can be replaced with in instance of contrapositive (∋-resp-weakFV ...)
+  -- TODO this can be substd with in instance of contrapositive (∋-resp-weakFV ...)
   neg-∋-cong : ∀ {j k : ℕ} {Φ : FunCtx} {α : FVar j} {β : FVar k}
               → ¬ ((Φ ,, α) ∋ β)
               → ¬ (Φ ∋ β)
   neg-∋-cong {j = j} {k = k} ¬Φ,α∋β Φ∋β with eqNat j k
-  ... | .true because ofʸ refl = ¬Φ,α∋β (lookupS (λ { refl → ¬Φ,α∋β lookupZ }) Φ∋β)
+  ... | .true because ofʸ refl = ¬Φ,α∋β (lookupDiffId (λ { refl → ¬Φ,α∋β lookupZ }) Φ∋β)
   ... | .false because ofⁿ ¬j≡k = ¬Φ,α∋β (lookupDiffArity (≢-sym ¬j≡k) Φ∋β)
 
 
 ------------------------------------------------------
-  fo-subst-preserves-typing : ∀ {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
-                             → (F H : TypeExpr)
+  fo-subst-preserves-typing : ∀ {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0} {F H : TypeExpr}
                              → Γ ≀ (Φ ,, α) ⊢ F
                              → Γ ≀ Φ ⊢ H
                              → Γ ≀ Φ ⊢ F [ α := H ]
-  fo-subst-preserves-typing 𝟘 H ⊢F ⊢H = 𝟘-I
-  fo-subst-preserves-typing 𝟙 H ⊢F ⊢H = 𝟙-I
-  fo-subst-preserves-typing (Nat^ βs [ F , G ]) H (Nat-I ⊢F ⊢G) ⊢H = Nat-I ⊢F ⊢G
-  fo-subst-preserves-typing (F + G) H (+-I ⊢F ⊢G) ⊢H = +-I (fo-subst-preserves-typing F H ⊢F ⊢H) (fo-subst-preserves-typing G H ⊢G ⊢H)
-  fo-subst-preserves-typing (F × G) H (×-I ⊢F ⊢G) ⊢H = ×-I (fo-subst-preserves-typing F H ⊢F ⊢H) (fo-subst-preserves-typing G H ⊢G ⊢H)
+  fo-subst-preserves-typing 𝟘-I ⊢H = 𝟘-I
+  fo-subst-preserves-typing 𝟙-I ⊢H = 𝟙-I
+  fo-subst-preserves-typing (Nat-I ⊢F ⊢G) ⊢H = Nat-I ⊢F ⊢G
+  fo-subst-preserves-typing (+-I ⊢F ⊢G) ⊢H = +-I (fo-subst-preserves-typing ⊢F ⊢H) (fo-subst-preserves-typing ⊢G ⊢H)
+  fo-subst-preserves-typing (×-I ⊢F ⊢G) ⊢H = ×-I (fo-subst-preserves-typing ⊢F ⊢H) (fo-subst-preserves-typing ⊢G ⊢H)
 
-  fo-subst-preserves-typing {α = α} AppT φ [ Gs ] H (AppT-I Γ∋φ .(Gs) ⊢Gs) ⊢H = AppT-I Γ∋φ (replaceVec Gs α H) (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)) 
-
-  -- fo-subst-preserves-typing {α = α ^F j} AppF φ ^F k [ Gs ] H (AppF-I Φ,α∋φ .(Gs) (⊢Gs)) ⊢H with eqNat k j | φ ≟ α 
-  -- ... | yes refl | yes refl = ⊢H
-  -- ... | yes refl | no φ≢α   = AppF-I (diffIdFun (≢-sym φ≢α) Φ,α∋φ) (replaceVec Gs (α ^F zero) H) (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))
-  -- ... | no k≢j   | _ = AppF-I (diffArityFun (≢-sym k≢j) Φ,α∋φ) (replaceVec Gs (α ^F zero) H) ((replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
-  -- -- AppF (φ ^F k) [ replaceVec Gs (α ^F j) H ] 
+  fo-subst-preserves-typing {α = α} {H = H} (AppT-I Γ∋φ Gs ⊢Gs) ⊢H = AppT-I Γ∋φ (substVec Gs α H) (substVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)) 
 
 
-  -- OG AppF case 
-  fo-subst-preserves-typing {α = α ^F 0} AppF (φ ^F 0) [ [] ] H (AppF-I Φ,α∋φ [] ⊤) ⊢H with φ ≟ α
-  ... | yes refl = ⊢H
-  ... | no ¬φ≡α = AppF-I (diffIdFun (≢-sym ¬φ≡α) Φ,α∋φ) [] bigtt
-  fo-subst-preserves-typing {α = α ^F 0} AppF φ ^F suc k [ G ∷ Gs ] H (AppF-I Φ,α∋φ .(G ∷ Gs) (⊢G , ⊢Gs)) ⊢H = 
-    AppF-I (diffArityFun (λ()) Φ,α∋φ) ((G [ (α ^F 0) := H ]) ∷ replaceVec Gs (α ^F 0) H)
-            ((fo-subst-preserves-typing G H ⊢G ⊢H) , (replaceVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
+  fo-subst-preserves-typing {α = α ^F j} {H = H} (AppF-I {φ = φ ^F k} Φ,α∋φ Gs ⊢Gs) ⊢H with eqNat k j | φ ≟ α 
+  ... | yes refl | yes refl = ⊢H
+  ... | yes refl | no φ≢α   = AppF-I (diffIdFun (≢-sym φ≢α) Φ,α∋φ) (substVec Gs (α ^F zero) H) (substVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs))
+  ... | no k≢j   | _ = AppF-I (diffArityFun (≢-sym k≢j) Φ,α∋φ) (substVec Gs (α ^F zero) H) ((substVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
+
+
+  -- -- OG AppF case 
+  -- fo-subst-preserves-typing {α = α ^F 0} (AppF-I {φ = φ ^F 0} Φ,α∋φ [] ⊤) ⊢H with φ ≟ α
+  -- ... | yes refl = ⊢H
+  -- ... | no ¬φ≡α = AppF-I (diffIdFun (≢-sym ¬φ≡α) Φ,α∋φ) [] bigtt
+  -- fo-subst-preserves-typing {α = α ^F 0} {H = H} (AppF-I {φ = φ ^F suc k} Φ,α∋φ (G ∷ Gs) (⊢G , ⊢Gs)) ⊢H = 
+  --   AppF-I (diffArityFun (λ()) Φ,α∋φ) ((G [ (α ^F 0) := H ]) ∷ substVec Gs (α ^F 0) H)
+  --           ((fo-subst-preserves-typing ⊢G ⊢H) , (substVec-preserves H Gs ⊢H (foreach-preserves-subst H Gs ⊢H ⊢Gs)))
 
 
 
-  fo-subst-preserves-typing {α = α} (μ φ [λ βs , G ] Ks) H (μ-I ⊢G .Ks ⊢Ks ) ⊢H =
-    μ-I ⊢G  (replaceVec Ks α H)
-    (replaceVec-preserves H Ks ⊢H (foreach-preserves-subst H Ks ⊢H ⊢Ks))
+  fo-subst-preserves-typing {α = α} {H = H} (μ-I ⊢G Ks ⊢Ks ) ⊢H =
+    μ-I ⊢G  (substVec Ks α H)
+    (substVec-preserves H Ks ⊢H (foreach-preserves-subst H Ks ⊢H ⊢Ks))
 
 
       -- (foreach-preserves-∋ βs bind-βs) (neg-∋-cong bind-φ)
@@ -523,76 +524,38 @@ mutual
       --         -- help {k = suc k} {φ = φ} {α = α} ¬Φ,α∋φ ¬Φ∋α p = neg-∋-cong ¬Φ,α∋φ (diffArityFun (λ()) (exFalso (¬Φ∋α (diffArityFun (λ()) p))))
       --         help {k = suc k} {φ = φ} {α = α} ¬Φ,α∋φ ¬Φ∋α Φ,φ∋α = exFalso (¬Φ∋α (diffArityFun (λ()) Φ,φ∋α))
 
-
-  -- weakenTCCtx : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φ : TCVar k)  (F : TypeExpr)
-  --                 → Γ ≀ Φ ⊢ F
-  --                 → (¬ (Γ ∋ φ))
-  --                 → Γ ,, φ ≀ Φ ⊢ F
-  -- weakenTCCtx φ 𝟘 _ _ = 𝟘-I
-  -- weakenTCCtx φ 𝟙 _ _ = 𝟙-I
-  -- weakenTCCtx φ  Nat^ βs [ F , G ] (Nat-I ⊢F ⊢G) p = Nat-I (weakenTCCtx φ F ⊢F p) (weakenTCCtx φ G ⊢G p)
-  -- weakenTCCtx φ (F + G) (+-I ⊢F ⊢G) p = +-I (weakenTCCtx φ F ⊢F p) (weakenTCCtx φ G ⊢G p)
-  -- weakenTCCtx φ (F × G) (×-I ⊢F ⊢G) p = ×-I (weakenTCCtx φ F ⊢F p) (weakenTCCtx φ G ⊢G p)
-  -- weakenTCCtx {Γ = Γ} (φ ^T k) AppT (ψ ^T j) [ Gs ] (AppT-I Γ∋ψ .Gs ⊢Gs) ¬Γ∋φ with eqNat k j | φ ≟ ψ
-  -- -- if k = j and φ = ψ
-  -- ... | .true because ofʸ refl | .true because ofʸ refl = AppT-I lookupZ Gs (foreach-preserves-weakening ¬Γ∋φ Gs ⊢Gs)
-  -- ... | .true because ofʸ refl | .false because ofⁿ ¬p = AppT-I (lookupS (≢-TCVar ψ φ (≢-sym ¬p)) Γ∋ψ) Gs (foreach-preserves-weakening ¬Γ∋φ Gs ⊢Gs)
-  -- ... | .false because ofⁿ k≢j | _ =  AppT-I (lookupDiffArity (≢-sym k≢j) Γ∋ψ) Gs (foreach-preserves-weakening ¬Γ∋φ Gs ⊢Gs)
-  -- weakenTCCtx φ AppF ψ [ Gs ] (AppF-I Φ∋ψ .Gs ⊢Gs) ¬Γ∋φ = AppF-I Φ∋ψ Gs (foreach-preserves-weakening ¬Γ∋φ Gs ⊢Gs)
-  -- weakenTCCtx φ (μ ψ [λ βs , F ] Gs) (μ-I .F ⊢F .Gs ⊢Gs) ¬Γ∋φ = μ-I (weakenTCCtx φ F ⊢F ¬Γ∋φ) Gs (foreach-preserves-weakening ¬Γ∋φ Gs ⊢Gs)
-
   -- actually we don't need ¬Γ∋φ to prove this
-  weakenTCCtx  : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φ : TCVar k)  (F : TypeExpr)
+  weakenTCCtx : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {F : TypeExpr} (φ : TCVar k) 
                   → Γ ≀ Φ ⊢ F
                   → Γ ,, φ ≀ Φ ⊢ F
-  weakenTCCtx  φ 𝟘 _ = 𝟘-I
-  weakenTCCtx  φ 𝟙 _ = 𝟙-I
-  weakenTCCtx  φ  Nat^ βs [ F , G ] (Nat-I ⊢F ⊢G) = Nat-I (weakenTCCtx  φ F ⊢F ) (weakenTCCtx  φ G ⊢G )
-  weakenTCCtx  φ (F + G) (+-I ⊢F ⊢G) = +-I (weakenTCCtx  φ F ⊢F) (weakenTCCtx  φ G ⊢G)
-  weakenTCCtx  φ (F × G) (×-I ⊢F ⊢G) = ×-I (weakenTCCtx  φ F ⊢F) (weakenTCCtx  φ G ⊢G)
-  weakenTCCtx  {Γ = Γ} (φ ^T k) AppT (ψ ^T j) [ Gs ] (AppT-I Γ∋ψ .Gs ⊢Gs) with eqNat k j | φ ≟ ψ
+  weakenTCCtx  φ 𝟘-I = 𝟘-I
+  weakenTCCtx  φ 𝟙-I = 𝟙-I
+  weakenTCCtx  φ  (Nat-I ⊢F ⊢G) = Nat-I (weakenTCCtx  φ ⊢F ) (weakenTCCtx φ ⊢G) 
+  weakenTCCtx  φ (+-I ⊢F ⊢G) = +-I (weakenTCCtx  φ ⊢F) (weakenTCCtx  φ ⊢G)
+  weakenTCCtx  φ (×-I ⊢F ⊢G) = ×-I (weakenTCCtx  φ ⊢F) (weakenTCCtx  φ ⊢G)
+  weakenTCCtx  {Γ = Γ} (φ ^T k) (AppT-I {φ = ψ ^T j} Γ∋ψ Gs ⊢Gs) with eqNat k j | φ ≟ ψ
   -- if k = j and φ = ψ
   ... | .true because ofʸ refl | .true because ofʸ refl = AppT-I lookupZ Gs (foreach-preserves-weakening  Gs ⊢Gs)
   -- otherwise.. 
-  ... | .true because ofʸ refl | .false because ofⁿ ¬p = AppT-I (lookupS (≢-TCVar ψ φ (≢-sym ¬p)) Γ∋ψ) Gs (foreach-preserves-weakening  Gs ⊢Gs)
+  ... | .true because ofʸ refl | .false because ofⁿ ¬p = AppT-I (lookupDiffId (≢-TCVar ψ φ (≢-sym ¬p)) Γ∋ψ) Gs (foreach-preserves-weakening  Gs ⊢Gs)
   ... | .false because ofⁿ k≢j | _ =  AppT-I (lookupDiffArity (≢-sym k≢j) Γ∋ψ) Gs (foreach-preserves-weakening  Gs ⊢Gs)
-  weakenTCCtx  φ AppF ψ [ Gs ] (AppF-I Φ∋ψ .Gs ⊢Gs) = AppF-I Φ∋ψ Gs (foreach-preserves-weakening  Gs ⊢Gs)
-  weakenTCCtx  φ (μ ψ [λ βs , F ] Gs) (μ-I ⊢F .Gs ⊢Gs) = μ-I (weakenTCCtx  φ F ⊢F)  Gs (foreach-preserves-weakening  Gs ⊢Gs)
+  weakenTCCtx  φ (AppF-I Φ∋ψ Gs ⊢Gs) = AppF-I Φ∋ψ Gs (foreach-preserves-weakening  Gs ⊢Gs)
+  weakenTCCtx  φ (μ-I ⊢F Gs ⊢Gs) = μ-I (weakenTCCtx  φ ⊢F)  Gs (foreach-preserves-weakening  Gs ⊢Gs)
 
-  -- -- not used 
-  -- ≢-TCVar-∋ : ∀ {k n : ℕ} { Γ : TCCtx } {φ ψ : TCVar k}
-  --           → Γ ∋ ψ
-  --           → ¬ (Γ ∋ φ)
-  --           → ψ ≢ φ
-  -- ≢-TCVar-∋ Γ∋ψ ¬Γ∋φ = λ {refl → ¬Γ∋φ Γ∋ψ }
 
   weakenTCCtxVec :  ∀ {k n : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φs : Vec (TCVar k) n)  (F : TypeExpr)
                     → Γ ≀ Φ ⊢ F
                     -- → (¬ (Γ ∋ φ))
                     → Γ ,++ φs ≀ Φ ⊢ F
   weakenTCCtxVec {n = zero} [] F ⊢F = ⊢F
-  weakenTCCtxVec {n = suc n} (φ ∷ φs) F ⊢F = weakenTCCtx  φ F (weakenTCCtxVec φs F ⊢F)
+  weakenTCCtxVec {n = suc n} (φ ∷ φs) F ⊢F = weakenTCCtx  φ (weakenTCCtxVec φs F ⊢F)
 
   weakenFunCtxVec :  ∀ {k n : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φs : Vec (FVar k) n)  (F : TypeExpr)
                     → Γ ≀ Φ ⊢ F
                     → Γ ≀ Φ ,++ φs ⊢ F
   weakenFunCtxVec {n = zero} [] F ⊢F = ⊢F
   -- weakenFunCtxVec {n = suc n} (φ ∷ φs) F ⊢F = weakenFunCtxVec φs F (weakenFunCtx  φ F ⊢F)
-  weakenFunCtxVec {n = suc n} (φ ∷ φs) F ⊢F = weakenFunCtx  φ F (weakenFunCtxVec φs F ⊢F)
-
-    -- where foreach-preserves-∋ : ∀ {k n : ℕ} { Γ : FunCtx } { Φ : FunCtx } { φs : Vec (FVar k) n}
-    --                             {ψ : FVar k}
-    --                             → foreach (λ φ → ¬ (Γ ∋ φ)) φs
-    --                             -- → foreach (λ φ → ¬ ((Γ ,, ψ) ∋ φ))) φs
-  -- (weakenTCCtx φ Γ Φ G ⊢G ¬Γ∋φ ) , {!  foreach-preserves-weakening ? ? ? !}
-  -- foreach-preserves-weakening ? ? ?
-
-  -- foreach-preserves-weakening : ∀ {k n : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : TCVar k}
-  --                                   → (¬ (Γ ∋ φ))
-  --                                   → (Gs : Vec TypeExpr n)
-  --                                   → foreach (λ G → Γ ≀ Φ ⊢ G) Gs
-  --                                   → foreach (λ G → Γ ,, φ ≀ Φ ⊢ G) Gs
-  -- foreach-preserves-weakening {φ = φ} ¬Γ∋φ = foreach-preserves (λ G ⊢G → weakenTCCtx φ G ⊢G ¬Γ∋φ )
+  weakenFunCtxVec {n = suc n} (φ ∷ φs) F ⊢F = weakenFunCtx  φ (weakenFunCtxVec φs F ⊢F)
 
   -- {-# TERMINATING #-}
   foreach-preserves-weakening  : ∀ {k n : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : TCVar k}
@@ -601,67 +564,35 @@ mutual
                                     → foreach (λ G → Γ ,, φ ≀ Φ ⊢ G) Gs
   -- foreach-preserves-weakening  {φ = φ} = foreach-preserves (λ G ⊢G → weakenTCCtx φ G ⊢G)
   foreach-preserves-weakening {φ = φ} [] _ = bigtt
-  foreach-preserves-weakening {φ = φ} (G ∷ Gs) (⊢G , ⊢Gs) = (weakenTCCtx φ G ⊢G) , (foreach-preserves-weakening Gs ⊢Gs) 
+  foreach-preserves-weakening {φ = φ} (G ∷ Gs) (⊢G , ⊢Gs) = (weakenTCCtx φ ⊢G) , (foreach-preserves-weakening Gs ⊢Gs) 
 
-
-  -- weakenFunCtx : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φ : FVar k)  (F : TypeExpr)
-  --                 → Γ ≀ Φ ⊢ F
-  --                 → (¬ (Φ ∋ φ))
-  --                 → Γ ≀ Φ ,, φ ⊢ F
-  -- weakenFunCtx φ 𝟘 _ _ = 𝟘-I
-  -- weakenFunCtx φ 𝟙 _ _ = 𝟙-I
-  -- weakenFunCtx φ  Nat^ βs [ F , G ] (Nat-I ⊢F ⊢G ) ¬Φ∋φ = Nat-I ⊢F ⊢G
-  -- weakenFunCtx φ (F + G) (+-I ⊢F ⊢G) ¬Φ∋φ = +-I (weakenFunCtx φ F ⊢F ¬Φ∋φ) (weakenFunCtx φ G ⊢G ¬Φ∋φ)
-  -- weakenFunCtx φ (F × G) (×-I ⊢F ⊢G) ¬Φ∋φ = ×-I (weakenFunCtx φ F ⊢F ¬Φ∋φ) (weakenFunCtx φ G ⊢G ¬Φ∋φ)
---
-  -- weakenFunCtx {Γ = Γ} (φ ^F k) AppT (ψ ^T j) [ Gs ] (AppT-I Γ∋ψ .Gs ⊢Gs) ¬Φ∋φ = AppT-I Γ∋ψ Gs (foreach-preserves-weakening-FV ¬Φ∋φ Gs ⊢Gs)
---
-  -- weakenFunCtx (φ ^F k) AppF (ψ ^F j) [ Gs ] (AppF-I Φ∋ψ Gs ⊢Gs) ¬Φ∋φ with eqNat k j
-  -- ... | .true because ofʸ refl = AppF-I (lookupS (λ { refl → ¬Φ∋φ Φ∋ψ }) Φ∋ψ) Gs (foreach-preserves-weakening-FV ¬Φ∋φ Gs ⊢Gs)
-  -- ... | .false because ofⁿ k≢j = AppF-I (lookupDiffArity (≢-sym k≢j) Φ∋ψ) Gs (foreach-preserves-weakening-FV ¬Φ∋φ Gs ⊢Gs)
-  -- weakenFunCtx φ (μ ψ [λ βs , F ] Gs) (μ-I .F ⊢F .Gs ⊢Gs ) ¬Φ∋φ =
-  --     μ-I ⊢F Gs (foreach-preserves-weakening-FV ¬Φ∋φ Gs ⊢Gs)
---
-  -- foreach-preserves-weakening-FV : ∀ {k n : ℕ} {Γ : TCCtx } {Φ : FunCtx} {φ : FVar k}
-  --                                   → (¬ (Φ ∋ φ))
-  --                                   → (Gs : Vec TypeExpr n)
-  --                                   → foreach (λ G → Γ ≀ Φ ⊢ G) Gs
-  --                                   → foreach (λ G → Γ ≀ Φ ,, φ  ⊢ G) Gs
-  -- foreach-preserves-weakening-FV {φ = φ} ¬Φ∋φ = foreach-preserves (λ G ⊢G → weakenFunCtx φ G ⊢G ¬Φ∋φ )
-
-  weakenFunCtx : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φ : FVar k)  (F : TypeExpr)
+  weakenFunCtx : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} {F : TypeExpr} (φ : FVar k)
                   → Γ ≀ Φ ⊢ F
                   → Γ ≀ Φ ,, φ ⊢ F
-  weakenFunCtx  φ 𝟘 _ = 𝟘-I
-  weakenFunCtx  φ 𝟙 _ = 𝟙-I
-  weakenFunCtx  φ  Nat^ βs [ F , G ] (Nat-I ⊢F ⊢G ) = Nat-I ⊢F ⊢G
-  weakenFunCtx  φ (F + G) (+-I ⊢F ⊢G) = +-I (weakenFunCtx  φ F ⊢F ) (weakenFunCtx  φ G ⊢G )
-  weakenFunCtx  φ (F × G) (×-I ⊢F ⊢G) = ×-I (weakenFunCtx  φ F ⊢F ) (weakenFunCtx  φ G ⊢G )
-  weakenFunCtx  {Γ = Γ} (φ) AppT (ψ) [ Gs ] (AppT-I Γ∋ψ .Gs ⊢Gs) = AppT-I Γ∋ψ Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
+  weakenFunCtx  φ 𝟘-I = 𝟘-I
+  weakenFunCtx  φ 𝟙-I = 𝟙-I
+  weakenFunCtx  φ (Nat-I ⊢F ⊢G ) = Nat-I ⊢F ⊢G
+  weakenFunCtx  φ (+-I ⊢F ⊢G) = +-I (weakenFunCtx  φ ⊢F ) (weakenFunCtx  φ ⊢G )
+  weakenFunCtx  φ (×-I ⊢F ⊢G) = ×-I (weakenFunCtx  φ ⊢F ) (weakenFunCtx  φ ⊢G )
+  weakenFunCtx  {Γ = Γ} (φ) (AppT-I Γ∋ψ Gs ⊢Gs) = AppT-I Γ∋ψ Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
   -- weakenFunCtx  {Γ = Γ} (φ ^F k) AppT (ψ ^T j) [ Gs ] (AppT-I Γ∋ψ .Gs ⊢Gs) = AppT-I Γ∋ψ Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
 
-  weakenFunCtx  (φ ^F k) AppF (ψ ^F j) [ Gs ] (AppF-I Φ∋ψ Gs ⊢Gs) with eqNat k j | φ ≟ ψ
-  ... | .true because ofʸ refl | .true because ofʸ refl = AppF-I lookupZ Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
-  ... | .true because ofʸ refl | .false because ofⁿ φ≢ψ = AppF-I (lookupS (≢-FVar ψ φ (≢-sym φ≢ψ)) Φ∋ψ) Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
-  ... | .false because ofⁿ k≢j | _ = AppF-I (lookupDiffArity (≢-sym k≢j) Φ∋ψ) Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
-  weakenFunCtx  φ (μ ψ [λ βs , F ] Gs) (μ-I ⊢F .Gs ⊢Gs ) =
+  weakenFunCtx  (φ ^F k) (AppF-I {φ = ψ ^F j} Φ∋ψ Gs ⊢Gs) with eqNat k j | φ ≟ ψ
+  ... | yes refl | yes refl = AppF-I lookupZ Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
+  ... | yes refl | no φ≢ψ   = AppF-I (lookupDiffId (≢-FVar ψ φ (≢-sym φ≢ψ)) Φ∋ψ) Gs (foreach-preserves-weakening-FV Gs ⊢Gs)
+  ... | no k≢j   | _        = AppF-I (lookupDiffArity (≢-sym k≢j) Φ∋ψ) Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
+
+
+
+  weakenFunCtx  φ (μ-I ⊢F Gs ⊢Gs ) =
       μ-I ⊢F Gs (foreach-preserves-weakening-FV  Gs ⊢Gs)
 
-
-
-  -- -- can't prove this because F [ α := H ] ≢ F 
-  -- -- and also would need α to be disjoint from Φ
-  -- weaken-subst : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (α : FVar 0)  (F H : TypeExpr) 
-  --                 → (⊢F : Γ ≀ Φ ⊢ F) → (⊢H : Γ ≀ Φ ⊢ H)
-  --                 → fo-subst-preserves-typing {α = α} F H (weakenFunCtx α F ⊢F) ⊢H
-  --                 → ⊢F
-  -- weaken-subst α F H ⊢F ⊢H = {!fo-subst-preserves-typing {α = α} F H (weakenFunCtx α F ⊢F) ⊢H!} 
 
 
   weakenFunCtximpl  : ∀ {k : ℕ} { Γ : TCCtx } {Φ : FunCtx} (φ : FVar k) → {F : TypeExpr}
                   → Γ ≀ Φ ⊢ F
                   → Γ ≀ Φ ,, φ ⊢ F
-  weakenFunCtximpl  φ {F} ⊢F = weakenFunCtx φ F ⊢F 
+  weakenFunCtximpl  φ {F} ⊢F = weakenFunCtx φ ⊢F 
 
   weakenFunCtx-∅  : ∀ { Γ : TCCtx } → (Φ : FunCtx) 
                   → {F : TypeExpr} → Γ ≀ ∅ ⊢ F
@@ -674,7 +605,7 @@ mutual
                        → (∅fv ,++ φs) ∋ ψ
                        → (Φ ,++ φs) ∋ ψ
   FunCtx-∋-weaken-∅,++ (φ ∷ φs) .φ lookupZ = lookupZ
-  FunCtx-∋-weaken-∅,++ (φ ∷ φs) ψ (lookupS ψ≢φ φs∋ψ) = lookupS ψ≢φ (FunCtx-∋-weaken-∅,++ φs ψ φs∋ψ)
+  FunCtx-∋-weaken-∅,++ (φ ∷ φs) ψ (lookupDiffId ψ≢φ φs∋ψ) = lookupDiffId ψ≢φ (FunCtx-∋-weaken-∅,++ φs ψ φs∋ψ)
   FunCtx-∋-weaken-∅,++ (φ ∷ φs) ψ (lookupDiffArity j≢k φs∋ψ) = lookupDiffArity j≢k (FunCtx-∋-weaken-∅,++ φs ψ φs∋ψ) 
 
 
@@ -697,12 +628,12 @@ mutual
   FunCtx-∋-swap {φ  = (φ ^F k)} {ψ = (ψ ^F j)} lookupZ with eqNat k j | φ ≟ ψ 
   ... | yes refl | yes refl = lookupZ 
   ... | no k≢j   | _ = lookupDiffArity (≢-sym k≢j) lookupZ 
-  ... | yes refl | no φ≢ψ = lookupS (≢-sym (≢-FVar φ ψ φ≢ψ)) lookupZ 
-  FunCtx-∋-swap  (lookupS _ lookupZ) = lookupZ
-  FunCtx-∋-swap (lookupS p≢ψ (lookupS p≢φ Φ∋p)) = lookupS p≢φ (lookupS p≢ψ Φ∋p)
-  FunCtx-∋-swap (lookupS p≢ψ (lookupDiffArity j≢k Φ∋p)) = lookupDiffArity j≢k (lookupS p≢ψ Φ∋p)
+  ... | yes refl | no φ≢ψ = lookupDiffId (≢-sym (≢-FVar φ ψ φ≢ψ)) lookupZ 
+  FunCtx-∋-swap  (lookupDiffId _ lookupZ) = lookupZ
+  FunCtx-∋-swap (lookupDiffId p≢ψ (lookupDiffId p≢φ Φ∋p)) = lookupDiffId p≢φ (lookupDiffId p≢ψ Φ∋p)
+  FunCtx-∋-swap (lookupDiffId p≢ψ (lookupDiffArity j≢k Φ∋p)) = lookupDiffArity j≢k (lookupDiffId p≢ψ Φ∋p)
   FunCtx-∋-swap  (lookupDiffArity _ lookupZ) = lookupZ
-  FunCtx-∋-swap (lookupDiffArity k≢j (lookupS p≢φ Φ∋p)) = lookupS p≢φ (lookupDiffArity k≢j Φ∋p)
+  FunCtx-∋-swap (lookupDiffArity k≢j (lookupDiffId p≢φ Φ∋p)) = lookupDiffId p≢φ (lookupDiffArity k≢j Φ∋p)
   FunCtx-∋-swap (lookupDiffArity k≢j (lookupDiffArity n≢k Φ∋p)) = lookupDiffArity n≢k (lookupDiffArity k≢j Φ∋p) 
 
 
@@ -750,7 +681,7 @@ mutual
                                     → foreach (λ G → Γ ≀ Φ ,, φ  ⊢ G) Gs
   -- foreach-preserves-weakening-FV  {φ = φ} = foreach-preserves (λ G ⊢G → weakenFunCtx  φ G ⊢G )
   foreach-preserves-weakening-FV {φ = φ} [] _ = bigtt
-  foreach-preserves-weakening-FV {φ = φ} (G ∷ Gs) (⊢G , ⊢Gs) = (weakenFunCtx φ G ⊢G) , (foreach-preserves-weakening-FV Gs ⊢Gs) 
+  foreach-preserves-weakening-FV {φ = φ} (G ∷ Gs) (⊢G , ⊢Gs) = (weakenFunCtx φ ⊢G) , (foreach-preserves-weakening-FV Gs ⊢Gs) 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 
@@ -772,7 +703,7 @@ mutual
                   → ¬ (ψ ≡ φ)
                   → ¬ ((Φ ,, ψ) ∋ φ)
   ∋-resp-weak2 ψ .ψ p q lookupZ = q refl
-  ∋-resp-weak2 ψ φ p q (lookupS x Φ∋φ) = p Φ∋φ
+  ∋-resp-weak2 ψ φ p q (lookupDiffId x Φ∋φ) = p Φ∋φ
   ∋-resp-weak2 ψ φ p q (lookupDiffArity x Φ∋φ) = x refl
   -}
 
@@ -780,12 +711,12 @@ mutual
                  → (α ≢ β)
                  → (Φ ,, (β ^F m) ,, (α ^F m)) ∋ φ
                  → (Φ ,, (α ^F m) ,, (β ^F m)) ∋ φ
-  diffIdSwap {α = α} {β = β} α≢β lookupZ = lookupS (≢-FVar α β α≢β) lookupZ
-  diffIdSwap α≢β (lookupS x lookupZ) = lookupZ
-  diffIdSwap α≢β (lookupS x (lookupS x₁ p)) = lookupS x₁ (lookupS x p)
-  diffIdSwap α≢β (lookupS x (lookupDiffArity x₁ p)) = exFalso (x₁ refl)
+  diffIdSwap {α = α} {β = β} α≢β lookupZ = lookupDiffId (≢-FVar α β α≢β) lookupZ
+  diffIdSwap α≢β (lookupDiffId x lookupZ) = lookupZ
+  diffIdSwap α≢β (lookupDiffId x (lookupDiffId x₁ p)) = lookupDiffId x₁ (lookupDiffId x p)
+  diffIdSwap α≢β (lookupDiffId x (lookupDiffArity x₁ p)) = exFalso (x₁ refl)
   diffIdSwap α≢β (lookupDiffArity x lookupZ) = lookupZ
-  diffIdSwap α≢β (lookupDiffArity x (lookupS x₁ p)) = exFalso (x refl)
+  diffIdSwap α≢β (lookupDiffArity x (lookupDiffId x₁ p)) = exFalso (x refl)
   diffIdSwap α≢β (lookupDiffArity x (lookupDiffArity x₁ p)) = lookupDiffArity x₁ (lookupDiffArity x p)
 
   diffAritySwap : ∀ {Φ : FunCtx} {α β : Id} {n m p : ℕ} {φ : FVar p}
@@ -793,109 +724,93 @@ mutual
                  → (Φ ,, (α ^F n) ,, (β ^F m)) ∋ φ
                  → (Φ ,, (β ^F m) ,, (α ^F n)) ∋ φ
   diffAritySwap n≢m lookupZ = lookupDiffArity (≢-sym n≢m) lookupZ
-  diffAritySwap n≢m (lookupS x lookupZ) = exFalso (n≢m refl)
-  diffAritySwap n≢m (lookupS x (lookupS x₁ q)) = lookupS x₁ (lookupS x q)
-  diffAritySwap n≢m (lookupS x (lookupDiffArity x₁ q)) = lookupDiffArity x₁ (lookupS x q)
+  diffAritySwap n≢m (lookupDiffId x lookupZ) = exFalso (n≢m refl)
+  diffAritySwap n≢m (lookupDiffId x (lookupDiffId x₁ q)) = lookupDiffId x₁ (lookupDiffId x q)
+  diffAritySwap n≢m (lookupDiffId x (lookupDiffArity x₁ q)) = lookupDiffArity x₁ (lookupDiffId x q)
   diffAritySwap n≢m (lookupDiffArity x lookupZ) = lookupZ
-  diffAritySwap n≢m (lookupDiffArity x (lookupS x₁ q)) = lookupS x₁ (lookupDiffArity x q)
+  diffAritySwap n≢m (lookupDiffArity x (lookupDiffId x₁ q)) = lookupDiffId x₁ (lookupDiffArity x q)
   diffAritySwap n≢m (lookupDiffArity x (lookupDiffArity x₁ q)) = lookupDiffArity x₁ (lookupDiffArity x q)
 
-  fo-substVec-preserves-typing : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} (αs : Vec (FVar 0) k)
-                               → (H : TypeExpr)
+  fo-substVec-preserves-typing : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} (αs : Vec (FVar 0) k) {H : TypeExpr} 
                                → (Gs : Vec TypeExpr k)
                                → Γ ≀ (Φ ,++ αs) ⊢ H
                                → foreach (λ G → Γ ≀ Φ ⊢ G) Gs
                                → Γ ≀ Φ ⊢ H [ αs := Gs ]Vec
-  fo-substVec-preserves-typing []       H []       ⊢H ⊢Gs = ⊢H
-  fo-substVec-preserves-typing {k} {Γ} {Φ} (α ∷ αs) H (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = 
+  fo-substVec-preserves-typing []          []       ⊢H ⊢Gs = ⊢H
+  fo-substVec-preserves-typing {k} {Γ} {Φ} (α ∷ αs) (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = 
    let -- ⊢H : Γ ≀ (Φ ,++ αs) ,, α ⊢ H 
-       ⊢H[α:=G] : Γ ≀ Φ ,++ αs ⊢ H [ α := G ]
-       ⊢H[α:=G] = (fo-subst-preserves-typing H G ⊢H (weakenFunCtxVec αs G ⊢G)) 
+       -- ⊢H[α:=G] : Γ ≀ Φ ,++ αs ⊢ H [ α := G ]
+       ⊢H[α:=G] = (fo-subst-preserves-typing ⊢H (weakenFunCtxVec αs G ⊢G)) 
       -- goal is : Γ ≀ Φ ⊢ ((H [ α := G ]) [ αs := Gs ]Vec)
-      in fo-substVec-preserves-typing αs (H [ α := G ]) Gs ⊢H[α:=G] ⊢Gs 
+      in fo-substVec-preserves-typing αs Gs ⊢H[α:=G] ⊢Gs 
 
 
   _[_:=[_]_] : ∀ {k : ℕ} → TypeExpr → (FVar k) → Vec (FVar 0) k → TypeExpr → TypeExpr
   -- when k = 0, higher-order subst coincides with first-order subst
   -- H [ (α ^F .0) :=[ [] ] F ] = H [ (α ^F 0) := F ]
-  _[_:=[_]_] {k = zero} H (α ^F .0) [] F = H [ α ^F 0 := F ]
+  -- _[_:=[_]_] {k = zero} H (α ^F .0) [] F = H [ α ^F 0 := F ]
 
+  {-# CATCHALL #-}
   𝟘 [ φ :=[ αs ] F ] = 𝟘
+  {-# CATCHALL #-}
   𝟙 [ φ :=[ αs ] F ] = 𝟙
+  {-# CATCHALL #-}
   Nat^ βs [ G , K ] [ φ :=[ αs ] F ] = Nat^ βs [ G  , K ]
+  {-# CATCHALL #-}
   (G + K) [ φ :=[ αs ] F ] = (G [ φ :=[ αs ] F ]) + (K [ φ :=[ αs ] F ])
+  {-# CATCHALL #-}
   (G × K) [ φ :=[ αs ] F ] = (G [ φ :=[ αs ] F ]) × (K [ φ :=[ αs ] F ])
-  AppT (ψ ^T j) [ Gs ] [ φ :=[ αs ] F ] = AppT (ψ ^T j) [ ho-replaceVec Gs φ αs F ]
-  --
-  AppF ψ ^F zero  [ Gs ] [ φ ^F suc k  :=[ αs ] F ] = AppF ψ ^F zero [ ho-replaceVec Gs (φ ^F suc k) αs F ]
-  -- 
-  AppF ψ ^F suc j [ Gs ] [ φ ^F suc k :=[ αs ] F ] with ψ ≟ φ | eqNat k j
-  ... | false because (ofⁿ ¬p) | _ = AppF (ψ ^F suc j) [ ho-replaceVec Gs (φ ^F suc k) αs F ]
-  -- ... | true because (ofʸ refl) with eqNat k j
-  ... | true because (ofʸ refl) | false because (ofⁿ ¬q) = AppF (ψ ^F suc j) [ ho-replaceVec Gs (φ ^F suc k) αs F ]
-  ... | true because (ofʸ refl) | true because (ofʸ refl)  = F [ αs := (ho-replaceVec Gs (φ ^F suc k) αs F) ]Vec -- F [ αs := ho-replaceVec Gs (φ ^F suc k) αs F ]
-  -- ... | false because (ofⁿ ¬p) = AppF (ψ ^F suc j) [ Gs ]
-  -- ... | true because (ofʸ refl) with eqNat k j
-  -- ... | false because (ofⁿ ¬q) = AppF (ψ ^F suc j) [ Gs ]
-  -- ... | true because (ofʸ refl)  = F [ αs := (ho-replaceVec Gs (φ ^F suc k) αs F) ]Vec -- F [ αs := ho-replaceVec Gs (φ ^F suc k) αs F ]
-  (μ ψ [λ βs , G ] Ks ) [ φ :=[ αs ] F ] = μ ψ [λ βs , G ] (ho-replaceVec Ks φ αs F)
-      --  where replaceKs : ∀ {n k : ℕ} → Vec TypeExpr n → FVar k → Vec (FVar 0) k → TypeExpr → Vec TypeExpr n
-      --        replaceKs [] φ αs F = []
-      --        replaceKs (K ∷ Ks) φ αs F = (K [ φ :=[ αs ] F ]) ∷ replaceKs Ks φ αs F
+  {-# CATCHALL #-}
+  AppT ψ [ Gs ] [ φ :=[ αs ] F ] = AppT ψ [ so-substVec Gs φ αs F ]
 
-  ho-replaceVec : ∀ {n k : ℕ} → Vec TypeExpr n → FVar k → Vec (FVar 0) k → TypeExpr → Vec TypeExpr n
-  ho-replaceVec [] φ αs F = []
-  ho-replaceVec (G ∷ Gs) φ αs F = (G [ φ :=[ αs ] F ]) ∷ ho-replaceVec Gs φ αs F
+  {-# CATCHALL #-}
+  AppF ψ ^F j [ Gs ] [ φ ^F k :=[ αs ] F ] with ψ ≟ φ | eqNat k j
+  ... | yes refl | yes refl = F [ αs := (so-substVec Gs (φ ^F k) αs F) ]Vec 
+  ... | yes refl | no k≢j   = AppF (ψ ^F j) [ so-substVec Gs (φ ^F k) αs F ]
+  ... | no ψ≢φ   | _        = AppF (ψ ^F j) [ so-substVec Gs (φ ^F k) αs F ]
+
+  {-# CATCHALL #-}
+  (μ ψ [λ βs , G ] Ks ) [ φ :=[ αs ] F ] = μ ψ [λ βs , G ] (so-substVec Ks φ αs F)
+
+
+
+  so-substVec : ∀ {n k : ℕ} → Vec TypeExpr n → FVar k → Vec (FVar 0) k → TypeExpr → Vec TypeExpr n
+  so-substVec [] φ αs F = []
+  so-substVec (G ∷ Gs) φ αs F = (G [ φ :=[ αs ] F ]) ∷ so-substVec Gs φ αs F
 
 
 
 mutual
-  ho-replaceVec-preserves : ∀ {n k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : FVar k} {αs : Vec (FVar 0) k}
+  so-substVec-preserves : ∀ {n k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : FVar k} {αs : Vec (FVar 0) k}
                         → (H : TypeExpr)
                         → (Gs : Vec TypeExpr n)
                         → Γ ≀ (Φ ,++ αs) ⊢ H
                         → foreach (λ G → Γ ≀ Φ ,, φ ⊢ G) Gs
-                        → foreach (λ G → Γ ≀ Φ ⊢ G) (ho-replaceVec Gs φ αs H)
-  ho-replaceVec-preserves H [] ⊢H ⊢Gs = bigtt
-  ho-replaceVec-preserves H (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = (ho-subst-preserves-typing G H ⊢G ⊢H) , ho-replaceVec-preserves H Gs ⊢H ⊢Gs
+                        → foreach (λ G → Γ ≀ Φ ⊢ G) (so-substVec Gs φ αs H)
+  so-substVec-preserves H [] ⊢H ⊢Gs = bigtt
+  so-substVec-preserves H (G ∷ Gs) ⊢H (⊢G , ⊢Gs) = (so-subst-preserves-typing ⊢G ⊢H) , so-substVec-preserves H Gs ⊢H ⊢Gs
 
-  ho-subst-preserves-typing : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : FVar k} {αs : Vec (FVar 0) k}
-                             → (F H : TypeExpr)
+  so-subst-preserves-typing : ∀ {k : ℕ} {Γ : TCCtx} {Φ : FunCtx} {φ : FVar k} {αs : Vec (FVar 0) k} {F H : TypeExpr}
                              → Γ ≀ (Φ ,, φ) ⊢ F
                              → Γ ≀ (Φ ,++ αs) ⊢ H
                              → Γ ≀ Φ ⊢ F [ φ :=[ αs ] H ]
-  ho-subst-preserves-typing {k = zero} {φ = φ ^F 0} {αs = []} F H ⊢F ⊢H = fo-subst-preserves-typing F H ⊢F ⊢H
+  -- so-subst-preserves-typing {k = zero} {φ = φ ^F 0} {αs = []} ⊢F ⊢H = fo-subst-preserves-typing ⊢F ⊢H
 
-  ho-subst-preserves-typing {k = suc k} 𝟘 H ⊢F ⊢H = 𝟘-I
-  ho-subst-preserves-typing {k = suc k} 𝟙 H ⊢F ⊢H = 𝟙-I
-  ho-subst-preserves-typing {k = suc k} Nat^ βs [ F , G ] H (Nat-I ⊢F ⊢G) ⊢H = Nat-I ⊢F ⊢G
-  ho-subst-preserves-typing {k = suc k} (F + G) H (+-I ⊢F ⊢G) ⊢H = +-I (ho-subst-preserves-typing F H ⊢F ⊢H) (ho-subst-preserves-typing G H ⊢G ⊢H)
-  ho-subst-preserves-typing {k = suc k} (F × G) H (×-I ⊢F ⊢G) ⊢H = ×-I (ho-subst-preserves-typing F H ⊢F ⊢H) (ho-subst-preserves-typing G H ⊢G ⊢H)
-  ho-subst-preserves-typing {k = suc k} {φ = φ} {αs = αs} AppT ψ ^T j [ Gs ] H (AppT-I Γ∋ψ .Gs ⊢Gs) ⊢H = AppT-I Γ∋ψ (ho-replaceVec Gs φ αs H) (ho-replaceVec-preserves H Gs ⊢H ⊢Gs)
-  ho-subst-preserves-typing {k = suc k} {φ = φ ^F .(suc k)} AppF ψ ^F zero [ [] ] H (AppF-I Φ,φ∋ψ [] ⊢Gs) ⊢H = AppF-I (diffArityFun (λ()) Φ,φ∋ψ) [] bigtt
-  ho-subst-preserves-typing {k = suc k} {φ = φ ^F suc k} {αs = αs} AppF (ψ ^F suc j) [ Gs ] H (AppF-I Φ,φ∋ψ Gs ⊢Gs) ⊢H with ψ ≟ φ | eqNat k j
-  ... | yes refl | yes refl = fo-substVec-preserves-typing αs H (ho-replaceVec Gs (φ ^F suc k) αs H) ⊢H (ho-replaceVec-preserves H Gs ⊢H ⊢Gs)
-  ... | no ψ≢φ   | yes refl = AppF-I (diffIdFun (≢-sym ψ≢φ) Φ,φ∋ψ) (ho-replaceVec Gs (φ ^F (suc k)) αs H) (ho-replaceVec-preserves H Gs ⊢H ⊢Gs)
-  ... | yes refl | no k≢j   = AppF-I (diffArityFun (¬-cong k≢j suc-cong2) Φ,φ∋ψ) (ho-replaceVec Gs (φ ^F suc k) αs H) (ho-replaceVec-preserves H Gs ⊢H ⊢Gs)
-  ... | no ψ≢φ   | no k≢j   = AppF-I (diffArityFun (¬-cong k≢j suc-cong2) Φ,φ∋ψ) (ho-replaceVec Gs (φ ^F suc k) αs H) (ho-replaceVec-preserves H Gs ⊢H ⊢Gs)
-  ho-subst-preserves-typing {k = suc k} {φ = φ} {αs = αs} (μ ψ [λ βs , G ] Ks) H (μ-I ⊢G .Ks ⊢Ks) ⊢H = μ-I ⊢G (ho-replaceVec Ks φ αs H) (ho-replaceVec-preserves H Ks ⊢H ⊢Ks)
+  so-subst-preserves-typing {k = k} 𝟘-I ⊢H = 𝟘-I
+  so-subst-preserves-typing {k = k} 𝟙-I ⊢H = 𝟙-I
+  so-subst-preserves-typing {k = k} (Nat-I ⊢F ⊢G) ⊢H = Nat-I ⊢F ⊢G
+  so-subst-preserves-typing {k = k} (+-I ⊢F ⊢G) ⊢H = +-I (so-subst-preserves-typing ⊢F ⊢H) (so-subst-preserves-typing ⊢G ⊢H)
+  so-subst-preserves-typing {k = k} (×-I ⊢F ⊢G) ⊢H = ×-I (so-subst-preserves-typing ⊢F ⊢H) (so-subst-preserves-typing ⊢G ⊢H)
+  so-subst-preserves-typing {k = k} {φ = φ} {αs = αs} {H = H} (AppT-I Γ∋ψ Gs ⊢Gs) ⊢H = AppT-I Γ∋ψ (so-substVec Gs φ αs H) (so-substVec-preserves H Gs ⊢H ⊢Gs)
 
+  so-subst-preserves-typing {k = k} {φ = φ ^F k} {αs = αs} {H = H} (AppF-I {φ = ψ ^F j} Φ,φ∋ψ Gs ⊢Gs) ⊢H with ψ ≟ φ | eqNat (k) j
+  ... | yes refl | yes refl  = fo-substVec-preserves-typing αs (so-substVec Gs (φ ^F k) αs H) ⊢H (so-substVec-preserves H Gs ⊢H ⊢Gs)
+  ... | yes refl | no sk≢j   = AppF-I (diffArityFun sk≢j Φ,φ∋ψ) (so-substVec Gs (φ ^F k) αs H) (so-substVec-preserves H Gs ⊢H ⊢Gs) 
+  ... | no ψ≢φ   | yes refl  = AppF-I (diffIdFun (≢-sym ψ≢φ) Φ,φ∋ψ) (so-substVec Gs (φ ^F (k)) αs H) (so-substVec-preserves H Gs ⊢H ⊢Gs)
+  ... | no ψ≢φ   | no sk≢j   = AppF-I (diffArityFun sk≢j Φ,φ∋ψ) (so-substVec Gs (φ ^F k) αs H) (so-substVec-preserves H Gs ⊢H ⊢Gs)
 
 
-
--- WTS substitution commutes with weakening...
-
-
-
-
--- weak-subst-commutes : ∀ {Γ : TCCtx} {Φ : FunCtx} {α : FVar 0}
---                          → (F H : TypeExpr)
---                          → Γ ≀ (Φ ,, α) ⊢ F
---                          → Γ ≀ Φ ⊢ H
---                          → Γ ≀ Φ ⊢ F [ α := H ]
---                          → Γ ≀ (Φ ,, α) ⊢ F [ α := H ]
--- weak-subst-commutes α F H ⊢F ⊢H
-
+  so-subst-preserves-typing {k = k} {φ = φ} {αs = αs} {H = H} (μ-I ⊢G Ks ⊢Ks) ⊢H = μ-I ⊢G (so-substVec Ks φ αs H) (so-substVec-preserves H Ks ⊢H ⊢Ks)
 
 mutual
   demoteVec : ∀ {k n : ℕ} → Vec TypeExpr n → FVar k → TCVar k → Vec TypeExpr n
@@ -943,8 +858,8 @@ mutual
   demotion-preserves-typing (F + G) (+-I ⊢F ⊢G) = +-I (demotion-preserves-typing F ⊢F) (demotion-preserves-typing G ⊢G)
   demotion-preserves-typing (F × G) (×-I ⊢F ⊢G) = ×-I (demotion-preserves-typing F ⊢F) (demotion-preserves-typing G ⊢G)
   -- should there be a Nat case for this ? 
-  demotion-preserves-typing {ψ = ψ} (Nat^ βs [ F , G ]) (Nat-I ⊢F ⊢G) = weakenTCCtx ψ Nat^ βs [ F , G ] (Nat-I ⊢F ⊢G)
-  demotion-preserves-typing {φ = φ} {ψ = ψ} (μ p [λ βs , F ] Gs) (μ-I ⊢F Gs ⊢Gs) = μ-I (weakenTCCtx ψ F ⊢F) (demoteVec Gs φ ψ) (demoteVec-preserves-typing Gs ⊢Gs)
+  demotion-preserves-typing {ψ = ψ} (Nat^ βs [ F , G ]) (Nat-I ⊢F ⊢G) = weakenTCCtx ψ (Nat-I ⊢F ⊢G)
+  demotion-preserves-typing {φ = φ} {ψ = ψ} (μ p [λ βs , F ] Gs) (μ-I ⊢F Gs ⊢Gs) = μ-I (weakenTCCtx ψ ⊢F) (demoteVec Gs φ ψ) (demoteVec-preserves-typing Gs ⊢Gs)
 
   
 -------------------------------------------------------
@@ -974,10 +889,10 @@ VarTypeVec (β ∷ βs) = (AppF-I lookupZ [] bigtt) , foreach-preserves-weakenin
 α = 3 ^F 0
 
 PTree-body : TypeExpr 
-PTree-body = (AppF β [ [] ]) + (AppF φ [ [ AppF β [ [] ] × AppF β [ [] ] ]  ])
+PTree-body = VarExpr β + AppF φ [ [ VarExpr β × VarExpr β ] ]
 
 PTree-args : Vec TypeExpr 1
-PTree-args = [ AppF α [ [] ] ] 
+PTree-args = [ VarExpr α ]
 
 PTree-α : TypeExpr
 PTree-α = μ φ [λ [ β ] , AppF β [ [] ] + AppF φ  [ [ AppF β [ [] ] × AppF β [ [] ] ] ] ] [ AppF α [ [] ] ] 
@@ -991,11 +906,11 @@ PTree-α = μ φ [λ [ β ] , AppF β [ [] ] + AppF φ  [ [ AppF β [ [] ] × Ap
         β,φ∋β : (∅fv ,, β ,, φ) ∋ β
         β,φ∋β = lookupDiffArity 0≢1 lookupZ 
 
-        ⊢β : ∅tc ≀ ∅ ,, β ,, φ ⊢ AppF β [ [] ]
+        ⊢β : ∅tc ≀ ∅ ,, β ,, φ ⊢ VarExpr β
         ⊢β = AppF-I β,φ∋β [] bigtt 
 
         β×β : TypeExpr
-        β×β = AppF β [ [] ] × AppF β [ [] ]
+        β×β = VarExpr β × VarExpr β
 
         ⊢β×β : ∅tc ≀ ∅ ,, β ,, φ ⊢ β×β
         ⊢β×β = ×-I ⊢β ⊢β 
@@ -1006,5 +921,7 @@ PTree-α = μ φ [λ [ β ] , AppF β [ [] ] + AppF φ  [ [ AppF β [ [] ] × Ap
         ⊢body : ∅tc ≀ ∅ ,, β ,, φ ⊢ PTree-body
         ⊢body = +-I ⊢β ⊢φβ×β  
 
-        ⊢args : ∅tc ≀ ∅fv ,, α ⊢ (AppF α [ [] ])
+        ⊢args : ∅tc ≀ ∅fv ,, α ⊢ VarExpr α
         ⊢args = AppF-I lookupZ [] bigtt 
+
+

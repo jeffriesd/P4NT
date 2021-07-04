@@ -6,7 +6,7 @@ module SetEnvironments.Properties where
 
 open import SetEnvironments.Core
 open import SetEnvironments.EnvironmentExtension
-open import NestedTypeSyntax using (FVar)
+open import Syntax.NestedTypeSyntax using (FVar)
 open import SetCats using (to0Functors)
 
 open import Categories.Functor using (Functor ; _∘F_ ) 
@@ -24,10 +24,10 @@ open import SetCats using (Sets ; Sets^)
 
 :fv=-unwind : ∀ {n k : ℕ} → (ρ : SetEnv) → (φ : FVar k) → (φs : Vec (FVar k) n) 
               → (F : Functor (Sets^ k) Sets) → (Fs : Vec (Functor (Sets^ k ) (Sets )) n) 
-              → ρ [ φ ∷ φs :fvs= F ∷ Fs ] 
-              ≡ (ρ [ φs :fvs= Fs ]) [ φ :fv= F ]
-:fv=-unwind Env[ tc , fv ] φ Vec.[] F Vec.[] = refl
-:fv=-unwind Env[ tc , fv ] φ (ψ ∷ ψs) F (G ∷ Gs) = refl 
+              → ρ [ φ ∷ φs :fvs= F ∷ Fs ]Set 
+              ≡ (ρ [ φs :fvs= Fs ]Set) [ φ :fv= F ]Set
+:fv=-unwind SetEnv[ tc , fv ] φ Vec.[] F Vec.[] = refl
+:fv=-unwind SetEnv[ tc , fv ] φ (ψ ∷ ψs) F (G ∷ Gs) = refl 
 -- doesn't pass confluence check, but maybe this is ok 
 -- {-# REWRITE :fv=-unwind #-}
 
@@ -46,35 +46,35 @@ extendSetEnv-ρ×As-tc-lem-expl : ∀ {k j} → (αs : Vec (FVar 0) k) (ρ : Set
 extendSetEnv-ρ×As-tc-lem-expl αs ρ Xs = sym (extendfv-vec-preserves-tc-ext ρ αs (to0Functors Xs))
 
 
-ForgetFVEnv-Extend-≃ : (Extend : Functor SetEnvCat SetEnvCat)
+ForgetFVSetEnv-Extend-≃ : (Extend : Functor SetEnvCat SetEnvCat)
                     → (preserves : ∀ ρ → Functor.F₀ Extend ρ ≡TC ρ)
-                    → ForgetFVEnv ≃ ForgetFVEnv ∘F Extend 
-ForgetFVEnv-Extend-≃ Extend preserves =
+                    → ForgetFVSetEnv ≃ ForgetFVSetEnv ∘F Extend 
+ForgetFVSetEnv-Extend-≃ Extend preserves =
             record { F⇒G = FtoG 
                    ; F⇐G = FfromG 
                    ; iso = λ ρ → iso ρ } 
 
-         where to-η : ∀ ρ → SetEnvMorph (Functor.F₀ ForgetFVEnv ρ) (Functor.F₀ (ForgetFVEnv ∘F Extend) ρ)
+         where to-η : ∀ ρ → SetEnvMorph (Functor.F₀ ForgetFVSetEnv ρ) (Functor.F₀ (ForgetFVSetEnv ∘F Extend) ρ)
                to-η ρ rewrite preserves ρ = idSetEnv 
                to-commute : ∀ {ρ ρ' : SetEnv} (f : SetEnvMorph ρ ρ') 
                             → (SetEnvCat Category.≈
-                            (SetEnvCat Category.∘ to-η ρ') (Functor.F₁ ForgetFVEnv f))
-                            ((SetEnvCat Category.∘ Functor.F₁ (ForgetFVEnv ∘F Extend) f)
+                            (SetEnvCat Category.∘ to-η ρ') (Functor.F₁ ForgetFVSetEnv f))
+                            ((SetEnvCat Category.∘ Functor.F₁ (ForgetFVSetEnv ∘F Extend) f)
                             (to-η ρ))
                to-commute {ρ} {ρ'} f rewrite preserves ρ | preserves ρ' = refl 
 
-               from-η : ∀ ρ → SetEnvMorph (Functor.F₀ (ForgetFVEnv ∘F Extend) ρ) (Functor.F₀ ForgetFVEnv ρ) 
+               from-η : ∀ ρ → SetEnvMorph (Functor.F₀ (ForgetFVSetEnv ∘F Extend) ρ) (Functor.F₀ ForgetFVSetEnv ρ) 
                from-η ρ rewrite preserves ρ = idSetEnv 
                from-commute : ∀ {ρ ρ' : SetEnv} (f : SetEnvMorph ρ ρ') 
                             → (SetEnvCat Category.≈
-                            (SetEnvCat Category.∘ from-η ρ') (Functor.F₁ (ForgetFVEnv ∘F Extend) f))
-                            ((SetEnvCat Category.∘ Functor.F₁ ForgetFVEnv f)
+                            (SetEnvCat Category.∘ from-η ρ') (Functor.F₁ (ForgetFVSetEnv ∘F Extend) f))
+                            ((SetEnvCat Category.∘ Functor.F₁ ForgetFVSetEnv f)
                             (from-η ρ))
                from-commute {ρ} {ρ'} f rewrite preserves ρ | preserves ρ' = refl 
 
-               FtoG : NaturalTransformation ForgetFVEnv (ForgetFVEnv ∘F Extend)
+               FtoG : NaturalTransformation ForgetFVSetEnv (ForgetFVSetEnv ∘F Extend)
                FtoG = ntHelper (record { η = to-η ; commute = to-commute })
-               FfromG : NaturalTransformation (ForgetFVEnv ∘F Extend) ForgetFVEnv
+               FfromG : NaturalTransformation (ForgetFVSetEnv ∘F Extend) ForgetFVSetEnv
                FfromG = ntHelper (record { η = from-η ; commute = from-commute })
 
                iso : ∀ (ρ : SetEnv) → 

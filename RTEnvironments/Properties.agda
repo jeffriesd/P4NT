@@ -21,8 +21,7 @@ open import Data.Vec using (Vec ; _∷_ )
 module RTEnvironments.Properties {o l e o' l' e' : Level}
   (C : Category o' l' e') 
   (D : ℕ → Category o l e) 
-  (Dt : (k : ℕ) → Category.Obj (D k))
-  (Dtm : (k : ℕ) → {d : Category.Obj (D k)} → (D k) [ d , Dt k ])
+  (D⊤ : (k : ℕ) → Terminal (D k))
   (toD0 : Functor C (D 0)) 
   where 
 -- About this file: 
@@ -43,9 +42,9 @@ module RTEnvironments.Properties {o l e o' l' e' : Level}
 private module C = Category C 
 
 
-open import RTEnvironments.Core D Dt Dtm 
-open import RTEnvironments.EnvironmentExtension C D Dt Dtm toD0 
-open import NestedTypeSyntax using (FVar)
+open import RTEnvironments.Core D D⊤
+open import RTEnvironments.EnvironmentExtension C D D⊤ toD0 
+open import Syntax.NestedTypeSyntax using (FVar)
 import SetCats 
 
 open SetCats.VecCat C

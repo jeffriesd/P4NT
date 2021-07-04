@@ -5,7 +5,7 @@
 
 module RelEnvironments.Core where
 
-open import RelSem.RelCats-Set 
+open import RelSem.RelCats 
 
 {-
 open import Environments.Core (Rels) (RelTerminal)
@@ -21,12 +21,12 @@ open import Environments.Core (Rels) (RelTerminal)
 open import SetCats using (Sets ; SetTerminal ; [Sets^_,Sets] ; SetFunctors-Terminal)
 
 
-open import SetEnvironments.Core
 
+open import Level renaming (zero to lzero ; suc to lsuc)
 open import Categories.Functor using (Functor)
 open import Categories.Category
 
-open import RTEnvironments.Core (RTCat) (RT-Terminal)
+open import RTEnvironments.Core {lsuc lzero} {lsuc lzero} {lsuc lzero} {RTCat} {RT-Terminal}
   renaming (Env to RelEnv
           ; idEnv to idRelEnv 
           ; EnvCat to RelEnvCat
@@ -40,12 +40,12 @@ open import RTEnvironments.Core (RTCat) (RT-Terminal)
           ; _[_:fvs=_] to  _[_:fvs=_]Rel
           ; ApplyEnv-FV to ApplyRelEnv-FV 
           ; ApplyEnv-TC to ApplyRelEnv-TC 
+          ; ForgetFVEnv to ForgetFVRelEnv 
+          ; _≡FV-ext_ to _≡FV-extRelEnv_
           ) public
 
 
-  -- (D : ℕ → Category o l e) 
-  -- (Dt : (k : ℕ) → Category.Obj (D k))
-  -- (Dtm : (k : ℕ) → {d : Category.Obj (D k)} → (D k) [ d , Dt k ])
+open import SetEnvironments.Core
 
 import Relation.Binary.PropositionalEquality as ≡
 open import Relation.Binary.PropositionalEquality using (_≡_)
@@ -132,7 +132,86 @@ module _ (F : ∀ {k} → Functor [Sets^ k ,Sets] (RTCat k)) where
                 } 
 
 EqEnv : Functor SetEnvCat RelEnvCat
-EqEnv = EnvFunc-Sets idRTFunctor
+EqEnv = EnvFunc-Sets EqRT
 
+
+
+
+π₁-EqEnv : ∀ (ρ : SetEnv) → Functor.F₀ π₁Env (Functor.F₀ EqEnv ρ) ≡ ρ 
+π₁-EqEnv ρ = ≡.refl 
+
+π₂-EqEnv : ∀ (ρ : SetEnv) → Functor.F₀ π₂Env (Functor.F₀ EqEnv ρ) ≡ ρ 
+π₂-EqEnv ρ = ≡.refl 
+
+
+module over-envs where
+
+  open import Syntax.NestedTypeSyntax 
+  open import SetCats using (Sets^)
+
+  open import Relation.Nullary using (Dec; yes; no; ¬_; _because_; ofʸ; ofⁿ)
+  open import SetEnvironments.Core renaming (_≡FV-extSetEnv_ to _≡FV-ext_)
+
+  π1 : RelEnv → SetEnv
+  π1 = Functor.F₀ π₁Env
+
+  π2 : RelEnv → SetEnv
+  π2 = Functor.F₀ π₁Env
+
+  π1RT : ∀ {k} → RTObj k → Functor (Sets^ k) Sets
+  π1RT = RTObj.F1 
+
+  -- over-env-ext : ∀ {k} (ρ : RelEnv) (φ : FVar k) (Rt : RTObj k)
+  --                  → π1 (ρ [ φ :fv= Rt ]Rel)
+  --                  ≡ (π1 ρ) [ φ :fv= π1RT Rt ]Set
+  -- over-env-ext ρ φ Rt = {!!} 
+                   
+
+  over-env-ext' : ∀ {k} (ρ : RelEnv) (φ : FVar k) (Rt : RTObj k)
+                   → (π1 (ρ [ φ :fv= Rt ]Rel))
+                   ≡FV-ext ((π1 ρ) [ φ :fv= π1RT Rt ]Set)
+  over-env-ext' ρ (φ ^F k) Rt (ψ ^F j) with eqNat k j | φ ≟ ψ
+  ... | yes ≡.refl | yes ≡.refl = ≡.refl 
+  ... | yes ≡.refl | no _ = ≡.refl 
+  ... | no _ | _ = ≡.refl 
+  
+  open import SetEnvironments.Core renaming (_≡TC_ to _≡TCSet_)
+
+  over-env-ext'' : ∀ {k} (ρ : RelEnv) (φ : FVar k) (Rt : RTObj k)
+                   → (π1 (ρ [ φ :fv= Rt ]Rel))
+                   ≡TCSet ((π1 ρ) [ φ :fv= π1RT Rt ]Set)
+  over-env-ext'' ρ φ Rt = ≡.refl 
+
+  -- to show ⟦F⟧ρ = ⟦F⟧ρ', we need to know that
+  -- ρ ≡FV-ext ρ'
+  -- and
+  -- ρ ≡TC ρ'
+
+  Eqv : SetEnv → RelEnv
+  Eqv = Functor.F₀ EqEnv
+  
+  open import Data.Vec using (Vec) renaming (map to vmap)
+  open import SetCats using (ConstF)
+
+  nathelp : ∀ {k} (ρ : SetEnv) (αs : Vec (FVar 0) k)
+            → (Rs : Vec RelObj k)
+            → (ρ [ αs :fvs= (vmap ConstF (vecfst Rs)) ]Set)
+            ≡TCSet
+              (π1 ((Eqv ρ) [ αs :fvs= vmap ConstRT Rs ]Rel))
+  nathelp ρ Vec.[] Vec.[] = ≡.refl
+  nathelp ρ (α Vec.∷ αs) (R Vec.∷ Rs) = ≡.refl
+
+
+
+  nathelp' : ∀ {k} (ρ : SetEnv) (αs : Vec (FVar 0) k)
+            → (Rs : Vec RelObj k)
+            → (ρ [ αs :fvs= (vmap ConstF (vecfst Rs)) ]Set)
+            ≡FV-ext
+              (π1 ((Eqv ρ) [ αs :fvs= vmap ConstRT Rs ]Rel))
+  nathelp' ρ Vec.[] Vec.[] φ = ≡.refl
+  nathelp' ρ ((α ^F k) Vec.∷ αs) (R Vec.∷ Rs) (ψ ^F j) with eqNat k j | α ≟ ψ
+  ... | yes ≡.refl | yes ≡.refl = ≡.refl 
+  ... | yes ≡.refl | no _ = nathelp' ρ αs Rs (ψ ^F j)
+  ... | no _ | _ = nathelp' ρ αs Rs (ψ ^F j)
 
 

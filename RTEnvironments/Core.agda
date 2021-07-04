@@ -21,9 +21,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_ ; _≢_)
 open ≡.≡-Reasoning
 open import Data.Product 
 
-open import NestedTypeSyntax using (Id ; TCCtx ; FunCtx ; TCVar ; FVar ; TypeExpr ; _,++_ ; _,,_ ; _^T_ ; _^F_ ; eqNat ; _≟_ )
-open import RelSem.RelCats-Set
-open import SetCats
+open import Syntax.NestedTypeSyntax using (Id ; TCCtx ; FunCtx ; TCVar ; FVar ; TypeExpr ; _,++_ ; _,,_ ; _^T_ ; _^F_ ; eqNat ; _≟_ )
 open import Utils using (exFalso ; cong-app-impl)
 open import Categories.Object.Terminal
 
@@ -35,8 +33,8 @@ open import Categories.Object.Terminal
 
 
 module RTEnvironments.Core {o l e : Level}
-  (D : ℕ → Category o l e) 
-  (D⊤ : (k : ℕ) → Terminal (D k))
+  {D : ℕ → Category o l e}
+  {D⊤ : (k : ℕ) → Terminal (D k)}
   where 
 
 
@@ -56,21 +54,23 @@ EnvFV = ∀ {k : ℕ} → FVar  k → DObj k
 
 record Env : Set (o ⊔ l ⊔ e) where
   constructor Env[_,_]
+  eta-equality 
   field
     tc : EnvTC
     fv : EnvFV 
 
 
-abstract 
-  -- environment that maps every variable to ConstF ⊤
-  -- -- the actual definition doesn't matter, so we can make it abstract 
-  trivFVEnv : ∀ {k : ℕ} → FVar k → DObj k
-  -- just use initial object here 
-  trivFVEnv {k} _ = Terminal.⊤ (D⊤ k)
+-- abstract 
+-- environment that maps every variable to ConstF ⊤
+-- -- the actual definition doesn't matter, so we can make it abstract 
+-- -- -- just kidding, we need the definition for overness proofs of type semantics 
+trivFVEnv : ∀ {k : ℕ} → FVar k → DObj k
+-- just use initial object here 
+trivFVEnv {k} _ = Terminal.⊤ (D⊤ k)
 
-  trivFVEnv-morph : ∀ {k} {φ ψ : FVar k} (fv : EnvFV)
-                    → (D k) [ (fv φ) ,  (trivFVEnv ψ) ]
-  trivFVEnv-morph {k} _ = Terminal.! (D⊤ k) 
+trivFVEnv-morph : ∀ {k} {φ ψ : FVar k} (fv : EnvFV)
+                → (D k) [ (fv φ) ,  (trivFVEnv ψ) ]
+trivFVEnv-morph {k} _ = Terminal.! (D⊤ k) 
 
 
 extendfv : ∀ {k} → EnvFV → FVar k → DObj k
@@ -299,7 +299,7 @@ mkIdTCNT-eq {k} record { eqTC = ≡.refl ; fv = _ } record { eqTC = ≡.refl ; f
 
 
 
--- -- [ ] TODO - redefine VarSem-FV and TCSem-FV in terms of these functors 
+
 -- for each variable of arity k, we have a functor from category of environments
 -- to category (D k) interpreting k-ary variables
 --
@@ -333,7 +333,7 @@ NatEnv : Env → Env
 NatEnv Env[ tc , fv ] = Env[ tc , trivFVEnv ]
 
 toNatEnv : ∀ (ρ : Env) → EnvMorph ρ (NatEnv ρ)
-toNatEnv ρ = record { eqTC = ≡.refl ; fv = λ φ → trivFVEnv-morph (Env.fv ρ) }
+toNatEnv ρ = record { eqTC = ≡.refl ; fv = λ ψ → trivFVEnv-morph {ψ = ψ} (Env.fv ρ) }
 
 
 -- construct NatEnv from just the tc part of environment 
@@ -353,3 +353,8 @@ ForgetFVEnv = record
   ; homomorphism = λ {X} {Y} {Z} {f} {g} {k} {φ} → Category.Equiv.sym (D k) (Category.identity² (D k))
   ; F-resp-≈ = λ _ → λ {k} {φ} → Category.Equiv.refl (D k)
   } 
+
+
+-- two environments are extensionally equal (on all functorial variables) 
+_≡FV-ext_ : ∀ (ρ ρ' : Env) → Set o
+ρ ≡FV-ext ρ' = ∀ {j : ℕ} (φ : FVar j) → (Env.fv ρ φ) ≡ (Env.fv ρ' φ)

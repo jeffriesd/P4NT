@@ -21,8 +21,8 @@ open import Relation.Nullary using (Dec; yes; no; ¬_)
 
 open import Data.Vec using (Vec ; _∷_; replicate ; []) renaming (map to vmap)
 open import Agda.Builtin.Nat renaming (Nat to ℕ ; _+_ to _+'_)
-open import NestedTypeSyntax 
-open import RelSem.RelCats-Set 
+open import Syntax.NestedTypeSyntax 
+open import RelSem.RelCats 
 open RelObj
 open import Data.Product renaming (_×_ to _×'_) 
 open import SetCats
@@ -40,11 +40,12 @@ open import SetEnvironments.EnvironmentExtension
 
 
 
-{- WORKING COMMENT
 -- this module provides a natural isomorphism showing that
 -- a functor F distribues over extendEnv2 in some sense 
 module _ (F : ∀ {j} → Functor (RTCat j) [Sets^ j ,Sets]) where 
 
+  abstract 
+  
     genlem-η : ∀ {k} (φ : FVar k) (ρ : RelEnv) (Rt : RTObj k)
             → SetEnvMorph (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv2 φ) (ρ , Rt))
                             (Functor.F₀ (extendSetEnv2 φ ∘F (EnvFunc-RT F ⁂ F)) (ρ , Rt))
@@ -136,84 +137,11 @@ module _ (F : ∀ {j} → Functor (RTCat j) [Sets^ j ,Sets]) where
                        ; iso = λ ρ → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } })
   
 
-{-
-π₁Env-extendSetEnv2-≃ : ∀ {k : ℕ} (φ : FVar k) 
-      → π₁Env ∘F extendRelEnv2 φ
-      ≃ extendSetEnv2 φ ∘F (π₁Env ⁂ π₁RT) 
-π₁Env-extendSetEnv2-≃ = genlem π₁RT 
 
-π₂Env-extendSetEnv2-≃ : ∀ {k : ℕ} (φ : FVar k) 
-      → π₂Env ∘F extendRelEnv2 φ
-      ≃ extendSetEnv2 φ ∘F (π₂Env ⁂ π₂RT) 
-π₂Env-extendSetEnv2-≃ = genlem π₂RT
-
--}
 
 
 
 {-
--- Not sure if this will work in general because 
--- F and G need to be related somehow 
-
--- we want to instantiate F with πᵢRT and G with πᵢRels, 
--- which are clearly related, so we can at least prove those cases 
-
--- F : RT → [Sets^k , Sets]
--- EnvFunc-RT F : RelEnvCat → SetEnvCat , is extension of F to environment category 
-module extendEnv-ρ×As-properties (F : ∀ {j} → Functor (RTCat j) [Sets^ j ,Sets]) (G : Functor Rels Sets)
-  where
-
-    open VecFunc
-
-    EnvFunc-ρ×As-η : ∀ {k} (αs : Vec (FVar 0) k)
-                    (ρ : RelEnv) (Rs : Vec RelObj k) 
-                    → SetEnvMorph
-                      -- (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (ρ , Rs))
-                      -- (Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs))
-                      (Functor.F₀ (EnvFunc-RT F) (ρ [ αs :fvs= vmap ConstRT Rs ]Rel ))
-                      (Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs))
-    -- EnvFunc-ρ×As-η αs ρ Rs = {!αs!} 
-    EnvFunc-ρ×As-η [] ρ [] = idSetEnv
-    EnvFunc-ρ×As-η {k = suc k} (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) = SetEnvM[ ≡.refl , fvm ]  
-      where fvm : {j : ℕ } (φ : FVar j) → [Sets^ j ,Sets] [
-                        SetEnv.fv (EnvFunc-RTObj F (ρ [ α ∷ αs :fvs= ConstRT R ∷ vmap ConstRT Rs ]Rel)) φ ,
-                        SetEnv.fv (Functor.₀ (extendSetEnv-ρ×As (α ∷ αs)) (Functor.₀ (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k)) (ρ , R ∷ Rs))) φ
-                        ]
-            fvm φ@(p ^F j) with eqNat z j | a ≟ p
-            ... | yes ≡.refl | yes ≡.refl = {!  !}
-
--- -- not sure exactly when this should hold.. other than for π₁/π₂ obviously 
--- Goal: NaturalTransformation
---       (Functor.F₀ F (ConstRT R))
---       (ConstF (Functor.F₀ G R))
-
-            ... | yes ≡.refl | no _ = {!!}
-            ... | no _  | _  = {!!}
-                        
-
-  
-    EnvFunc-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
-        → EnvFunc-RT F ∘F extendRelEnv-ρ×As αs 
-        ≃ extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ (Func^ Rels Sets G k))
-    EnvFunc-ρ×As-≃ αs =
-      niHelper (record { η = λ { (ρ , Rs) → EnvFunc-ρ×As-η αs ρ Rs  }  
-                       ; η⁻¹ = {!!}
-                       ; commute = {!!}
-                       ; iso = {!!} }) 
-open extendEnv-ρ×As-properties
--}
-
-
-{-
-π₁Env-extendSetEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
-      → π₁Env ∘F extendRelEnv-ρ×As αs 
-      ≃ extendSetEnv-ρ×As αs ∘F (π₁Env ⁂ π₁Vec k) 
-π₁Env-extendSetEnv-ρ×As-≃ αs = EnvFunc-ρ×As-≃ π₁RT π₁Rels αs 
-
--}
-
-
-
 π₁Env-ρ×As-η : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k) 
                -- → SetEnvMorph (Functor.F₀ (π₁Env ∘F extendRelEnv-ρ×As αs) (ρ , Rs))
                --               (Functor.F₀ (extendSetEnv-ρ×As αs ∘F (π₁Env ⁂ π₁Vec k)) (ρ , Rs))
@@ -274,11 +202,13 @@ open extendEnv-ρ×As-properties
 
 
 
+-- define π₁Env-ρ×As-commute etc. 
+-- further below we generalize this so we don't need a copy for π₁ and for π₂ 
+
 Nat-refl⟩∘⟨_ : ∀ {k : ℕ} {F G H : Functor (Sets^ k) Sets} {η : NaturalTransformation G H} {δ δ' : NaturalTransformation F G} 
        → [Sets^ k ,Sets] [ δ ≈ δ' ]
        → [Sets^ k ,Sets] [ η ∘v δ ≈ η ∘v δ' ] 
 Nat-refl⟩∘⟨_ {η = η} {δ} {δ'} δ≈δ' {Xs} {x} = ≡.cong (NaturalTransformation.η η Xs) δ≈δ'
-
 
 π₁Env-ρ×As-commute : ∀ {k} (αs : Vec (FVar 0) k) {ρ ρ' : RelEnv} (f : RelEnvMorph ρ ρ')
                      → {Rs Ss : Vec RelObj k} → (ms : (Rels^ k) [ Rs , Ss ] ) 
@@ -385,9 +315,6 @@ Nat-refl⟩∘⟨_ {η = η} {δ} {δ'} δ≈δ' {Xs} {x} = ≡.cong (NaturalTra
                      ; η⁻¹ =  λ { (ρ , Rs) → π₁Env-ρ×As-η' αs ρ Rs }
                      ; commute = λ { (f , ms) → π₁Env-ρ×As-commute αs f ms  } 
                      ; iso = λ { (ρ , Rs) → record { isoˡ = π₁Env-ρ×As-isoˡ αs ρ Rs ; isoʳ = π₁Env-ρ×As-isoʳ αs ρ Rs } } }) 
-
-
-
 -}
 
 
@@ -401,253 +328,253 @@ module _ (F : ∀ {j} → Functor (RTCat j) [Sets^ j ,Sets])
          where 
     open VecFunc
 
-    FConstRT⇒ConstGR : ∀ (R : RelObj) → NaturalTransformation (Functor.F₀ F (ConstRT R)) (ConstF (Functor.F₀ G R))
-    FConstRT⇒ConstGR R = NaturalTransformation.η (NI.NaturalIsomorphism.F⇒G Const-≃) R 
+    abstract 
 
-    FConstRT⇐ConstGR : ∀ (R : RelObj) → NaturalTransformation (ConstF (Functor.F₀ G R)) (Functor.F₀ F (ConstRT R))
-    FConstRT⇐ConstGR R = NaturalTransformation.η (NI.NaturalIsomorphism.F⇐G Const-≃) R  
+        FConstRT⇒ConstGR : ∀ (R : RelObj) → NaturalTransformation (Functor.F₀ F (ConstRT R)) (ConstF (Functor.F₀ G R))
+        FConstRT⇒ConstGR R = NaturalTransformation.η (NI.NaturalIsomorphism.F⇒G Const-≃) R 
+
+        FConstRT⇐ConstGR : ∀ (R : RelObj) → NaturalTransformation (ConstF (Functor.F₀ G R)) (Functor.F₀ F (ConstRT R))
+        FConstRT⇐ConstGR R = NaturalTransformation.η (NI.NaturalIsomorphism.F⇐G Const-≃) R  
 
 
-    Const-commute : ∀ {R S : RelObj} (m : RelMorph R S)
-                    → [Sets^ 0 ,Sets] [
-                             (FConstRT⇒ConstGR S) ∘v (Functor.F₁ (F ∘F Rels⇒RT0) m)
-                             ≈ 
-                             Functor.F₁ (Sets→0Functors ∘F G) m ∘v (FConstRT⇒ConstGR R) ] 
-    Const-commute m = NaturalTransformation.commute (NI.NaturalIsomorphism.F⇒G Const-≃) m 
-    
+        Const-commute : ∀ {R S : RelObj} (m : RelMorph R S)
+                        → [Sets^ 0 ,Sets] [
+                                (FConstRT⇒ConstGR S) ∘v (Functor.F₁ (F ∘F Rels⇒RT0) m)
+                                ≈ 
+                                Functor.F₁ (Sets→0Functors ∘F G) m ∘v (FConstRT⇒ConstGR R) ] 
+        Const-commute m = NaturalTransformation.commute (NI.NaturalIsomorphism.F⇒G Const-≃) m 
 
-    FEnv-ρ×As-η : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k) 
-                → SetEnvCat [
-                Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (ρ , Rs) 
-                , Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs)
-                ]
-    FEnv-ρ×As-η [] ρ [] = idSetEnv 
-    FEnv-ρ×As-η {k = suc k} (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) = SetEnvM[ ≡.refl , fvm  ] 
-      where fvm : ∀ {j} (φ : FVar j) → [Sets^ j ,Sets] [
-                    SetEnv.fv (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As ((a ^F 0) ∷ αs)) (ρ , R ∷ Rs)) φ
-                    , SetEnv.fv (Functor.F₀ (extendSetEnv-ρ×As ((a ^F 0) ∷ αs) ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k))) (ρ , R ∷ Rs)) φ
+
+        FEnv-ρ×As-η : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k) 
+                    → SetEnvCat [
+                    Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (ρ , Rs) 
+                    , Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs)
                     ]
+        FEnv-ρ×As-η [] ρ [] = idSetEnv 
+        FEnv-ρ×As-η {k = suc k} (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) = SetEnvM[ ≡.refl , fvm  ] 
+            where fvm : ∀ {j} (φ : FVar j) → [Sets^ j ,Sets] [
+                            SetEnv.fv (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As ((a ^F 0) ∷ αs)) (ρ , R ∷ Rs)) φ
+                            , SetEnv.fv (Functor.F₀ (extendSetEnv-ρ×As ((a ^F 0) ∷ αs) ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k))) (ρ , R ∷ Rs)) φ
+                            ]
 
-            fvm φ@(p ^F j) with eqNat z j | a ≟ p
-            ... | yes ≡.refl | yes ≡.refl = FConstRT⇒ConstGR R 
-            ... | yes ≡.refl | no _ = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ Rs) φ
-            ... | no _  | _  =  SetEnvMorph.fv (FEnv-ρ×As-η αs ρ Rs) φ
+                  fvm φ@(p ^F j) with eqNat z j | a ≟ p
+                  ... | yes ≡.refl | yes ≡.refl = FConstRT⇒ConstGR R 
+                  ... | yes ≡.refl | no _ = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ Rs) φ
+                  ... | no _  | _  =  SetEnvMorph.fv (FEnv-ρ×As-η αs ρ Rs) φ
 
 
-    FEnv-ρ×As-η' : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k) 
-                → SetEnvCat [
-                Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs)
-                , Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (ρ , Rs) 
-                ]
-    FEnv-ρ×As-η' [] ρ [] = idSetEnv 
-    FEnv-ρ×As-η' {k = suc k} (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) = SetEnvM[ ≡.refl , fvm  ] 
-      where fvm : ∀ {j} (φ : FVar j) → [Sets^ j ,Sets] [
-                    SetEnv.fv (Functor.F₀ (extendSetEnv-ρ×As ((a ^F 0) ∷ αs) ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k))) (ρ , R ∷ Rs)) φ
-                    , SetEnv.fv (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As ((a ^F 0) ∷ αs)) (ρ , R ∷ Rs)) φ
+        FEnv-ρ×As-η' : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k) 
+                    → SetEnvCat [
+                    Functor.F₀ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (ρ , Rs)
+                    , Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (ρ , Rs) 
                     ]
+        FEnv-ρ×As-η' [] ρ [] = idSetEnv 
+        FEnv-ρ×As-η' {k = suc k} (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) = SetEnvM[ ≡.refl , fvm  ] 
+            where fvm : ∀ {j} (φ : FVar j) → [Sets^ j ,Sets] [
+                            SetEnv.fv (Functor.F₀ (extendSetEnv-ρ×As ((a ^F 0) ∷ αs) ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k))) (ρ , R ∷ Rs)) φ
+                            , SetEnv.fv (Functor.F₀ (EnvFunc-RT F ∘F extendRelEnv-ρ×As ((a ^F 0) ∷ αs)) (ρ , R ∷ Rs)) φ
+                            ]
 
-            fvm φ@(p ^F j) with eqNat z j | a ≟ p
-            ... | yes ≡.refl | yes ≡.refl = FConstRT⇐ConstGR R 
-            ... | yes ≡.refl | no _ = SetEnvMorph.fv (FEnv-ρ×As-η' αs ρ Rs) φ
-            ... | no _  | _  =  SetEnvMorph.fv (FEnv-ρ×As-η' αs ρ Rs) φ
-
-
-
-                        -- (SetEnvCat Category.≈
-                        -- (SetEnvCat Category.∘ (λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs }) Y)
-                        -- (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) f))
-                        -- ((SetEnvCat Category.∘
-                        -- Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) f)
-                        -- ((λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs }) X))
+                  fvm φ@(p ^F j) with eqNat z j | a ≟ p
+                  ... | yes ≡.refl | yes ≡.refl = FConstRT⇐ConstGR R 
+                  ... | yes ≡.refl | no _ = SetEnvMorph.fv (FEnv-ρ×As-η' αs ρ Rs) φ
+                  ... | no _  | _  =  SetEnvMorph.fv (FEnv-ρ×As-η' αs ρ Rs) φ
 
 
-            -- Goal: Functor.F₁ F (RelEnvMorph.fv m' φ) Setsj.≈
-            --     SetEnvMorph.fv (EnvFunc-RT-map F m') φ 
 
-    F-resp-fv : ∀ {k} (φ : FVar k) {ρ ρ' : RelEnv} (m : RelEnvMorph ρ ρ')
-          → [Sets^ k ,Sets] [ Functor.F₁ F (RelEnvMorph.fv m φ) ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m) φ ]
-    F-resp-fv φ RelEnvM[ ≡.refl , fvm ] = ≡.refl
-
-    FEnv-ρ×As-commute : ∀ {k} (αs : Vec (FVar 0) k) {ρ ρ' : RelEnv} (f : RelEnvMorph ρ ρ')
-                        → {Rs Ss : Vec RelObj k} (ms : (Rels^ k) [ Rs , Ss ]) 
-                        → SetEnvCat [
-                        FEnv-ρ×As-η αs ρ' Ss
-                        ∘SetEnv  (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
-                        ≈
-                        Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms)
-                        ∘SetEnv FEnv-ρ×As-η αs ρ Rs 
-                        ]
-    FEnv-ρ×As-commute [] f {[]} {[]} _ = ≡.refl 
+                            -- (SetEnvCat Category.≈
+                            -- (SetEnvCat Category.∘ (λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs }) Y)
+                            -- (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) f))
+                            -- ((SetEnvCat Category.∘
+                            -- Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) f)
+                            -- ((λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs }) X))
 
 
--- SetEnvM[ ≡.refl , RelEnvironments.Properties.fvm k a αs ρ' S Ss ]
--- = FEnv-ρ×As-η αs ρ' (S ∷ Ss)
+                -- Goal: Functor.F₁ F (RelEnvMorph.fv m' φ) Setsj.≈
+                --     SetEnvMorph.fv (EnvFunc-RT-map F m') φ 
 
+        F-resp-fv : ∀ {k} (φ : FVar k) {ρ ρ' : RelEnv} (m : RelEnvMorph ρ ρ')
+            → [Sets^ k ,Sets] [ Functor.F₁ F (RelEnvMorph.fv m φ) ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m) φ ]
+        F-resp-fv φ RelEnvM[ ≡.refl , fvm ] = ≡.refl
 
--- yes yes case - FEnv-ρ×As-η αs ρ (R ∷ Rs) = FConstRT⇒ConstGR R 
--- other cases  - FEnv-ρ×As-η αs ρ (R ∷ Rs) = SetEnvM[ ≡.refl , λ φ → SetEnvMorph.fv (FEnv-ρ×As-η αs ρ Rs) φ ] 
+        FEnv-ρ×As-commute : ∀ {k} (αs : Vec (FVar 0) k) {ρ ρ' : RelEnv} (f : RelEnvMorph ρ ρ')
+                            → {Rs Ss : Vec RelObj k} (ms : (Rels^ k) [ Rs , Ss ]) 
+                            → SetEnvCat [
+                            FEnv-ρ×As-η αs ρ' Ss
+                            ∘SetEnv  (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
+                            ≈
+                            Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms)
+                            ∘SetEnv FEnv-ρ×As-η αs ρ Rs 
+                            ]
+        FEnv-ρ×As-commute [] f {[]} {[]} _ = ≡.refl 
+        FEnv-ρ×As-commute {suc k} (α@(a ^F z) ∷ αs) {ρ} {ρ'} f@(RelEnvM[ ≡.refl , fvm ]) {R ∷ Rs} {S ∷ Ss} (m , ms) {j} {φ@(p ^F j)} {Xs} {x} with eqNat z j | a ≟ p | Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms)  | ≡.inspect (Functor.F₁ (extendRelEnv-ρ×As αs)) (f , ms)
+        ... | yes ≡.refl | yes ≡.refl | _ | _ = Const-commute m 
+        ... | yes ≡.refl | no _ | m'@(RelEnvM[ e' ,  fvmm' ])  | ≡.[ ≡.refl ] = goal
+              where rec : SetEnvCat [ FEnv-ρ×As-η αs ρ' Ss ∘SetEnv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
+                                            ≈ Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs ] 
+                    rec = FEnv-ρ×As-commute αs f ms 
 
-{-
-Goal: NaturalTransformation.η
-      (SetEnvMorph.fv
-       (SetEnvM[ ≡.refl , RelEnvironments.Properties.fvm k a αs ρ' S Ss ]
-        ∘SetEnv Functor.₁ (EnvFunc-RT F) (Functor.₁ (extendRelEnv-ρ×As (α ∷ αs)) (f , (m , ms))))
-       φ)
-      Xs x
-      ≡
-      NaturalTransformation.η
-      (SetEnvMorph.fv
-       (Functor.₁ (extendSetEnv-ρ×As (α ∷ αs))
-        (Functor.₁ (EnvFunc-RT F ⁂ Func^ Rels Sets G (suc k))
-         (f , (m , ms)))
-        ∘SetEnv
-        SetEnvM[ ≡.refl , RelEnvironments.Properties.fvm k a αs ρ' R Rs ])
-       φ)
-      Xs x
--}
-    FEnv-ρ×As-commute {suc k} (α@(a ^F z) ∷ αs) {ρ} {ρ'} f@(RelEnvM[ ≡.refl , fvm ]) {R ∷ Rs} {S ∷ Ss} (m , ms) {j} {φ@(p ^F j)} {Xs} {x} with eqNat z j | a ≟ p | Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms)  | ≡.inspect (Functor.F₁ (extendRelEnv-ρ×As αs)) (f , ms)
-    ... | yes ≡.refl | yes ≡.refl | _ | _ = Const-commute m 
-    ... | yes ≡.refl | no _ | m'@(RelEnvM[ e' ,  fvmm' ])  | ≡.[ ≡.refl ] = goal
-      where rec : SetEnvCat [ FEnv-ρ×As-η αs ρ' Ss ∘SetEnv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
-                                    ≈ Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs ] 
-            rec = FEnv-ρ×As-commute αs f ms 
+                    ff = RelEnvMorph.fv (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))
 
-            ff = RelEnvMorph.fv (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))
+                    fvmm'' = RTM[ idnat ∘v RTMorph.d1 (fvmm' φ) , idnat ∘v RTMorph.d2 (fvmm' φ) , RTMorph.d-preserves (fvmm' φ) ]
 
-            fvmm'' = RTM[ idnat ∘v RTMorph.d1 (fvmm' φ) , idnat ∘v RTMorph.d2 (fvmm' φ) , RTMorph.d-resp (fvmm' φ) ]
+                    lhs' = Functor.F₁ F fvmm'' 
 
-            lhs' = Functor.F₁ F fvmm'' 
+                    RTM-≈ : (RTCat j) [ fvmm' φ ≈ fvmm'' ] 
+                    RTM-≈ = ≡.refl , ≡.refl 
 
-            RTM-≈ : (RTCat j) [ fvmm' φ ≈ fvmm'' ] 
-            RTM-≈ = ≡.refl , ≡.refl 
-                                                           
-            lhs = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v lhs' 
-            rhs = SetEnvMorph.fv (Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs) φ
+                    lhs = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v lhs' 
+                    rhs = SetEnvMorph.fv (Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs) φ
 
-            module SEC = Category SetEnvCat 
+                    module SEC = Category SetEnvCat 
 
-            module Setsj = Category [Sets^ j ,Sets]
-            open Setsj.HomReasoning
+                    module Setsj = Category [Sets^ j ,Sets]
+                    open Setsj.HomReasoning
 
-            subsubgoal : [Sets^ j ,Sets] [ Functor.F₁ F fvmm'' ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
-            subsubgoal =  begin (Functor.F₁ F fvmm'')
-                                ≈⟨  Functor.F-resp-≈ F RTM-≈ ⟩
-                                Functor.F₁ F (fvmm' φ)
-                                ≈⟨ F-resp-fv φ m' ⟩
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m') φ  
-                                ≈⟨ ≡.refl ⟩ -- this line comes from proof given by inspect 
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))) φ  
-                                ≈⟨ ≡.refl ⟩
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ  ∎   
+                    subsubgoal : [Sets^ j ,Sets] [ Functor.F₁ F fvmm'' ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
+                    subsubgoal =  begin (Functor.F₁ F fvmm'')
+                                        ≈⟨  Functor.F-resp-≈ F RTM-≈ ⟩
+                                        Functor.F₁ F (fvmm' φ)
+                                        ≈⟨ F-resp-fv φ m' ⟩
+                                        SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m') φ  
+                                        ≈⟨ ≡.refl ⟩ -- this line comes from proof given by inspect 
+                                        SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))) φ  
+                                        ≈⟨ ≡.refl ⟩
+                                        SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ  ∎   
 
-            subgoal : [Sets^ j ,Sets] [ lhs ≈ SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
-            subgoal {Xs} {x} =  ≡.cong (NaturalTransformation.η (SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ) Xs) subsubgoal  
+                    subgoal : [Sets^ j ,Sets] [ lhs ≈ SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
+                    subgoal {Xs} {x} =  ≡.cong (NaturalTransformation.η (SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ) Xs) subsubgoal  
 
-            goal : [Sets^ j ,Sets] [ lhs ≈ rhs ] 
-            goal = begin lhs
-                         ≈⟨ subgoal ⟩
-                         SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ
-                         ≈⟨ rec ⟩
-                         rhs  ∎ 
+                    goal : [Sets^ j ,Sets] [ lhs ≈ rhs ] 
+                    goal = begin lhs
+                                ≈⟨ subgoal ⟩
+                                SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ
+                                ≈⟨ rec ⟩
+                                rhs  ∎ 
 
-    -- we must match on fvmm' or else goal doesn't typecheck.
-    -- same exact case as case directly above... 
-    ... | no _  | _  | m'@(RelEnvM[ e' , fvmm' ]) | ≡.[ ≡.refl ] = goal
-      where rec : SetEnvCat [ FEnv-ρ×As-η αs ρ' Ss ∘SetEnv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
-                                    ≈ Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs ] 
-            rec = FEnv-ρ×As-commute αs f ms 
+        -- we must match on fvmm' or else goal doesn't typecheck.
+        -- same exact case as case directly above... 
+        ... | no _  | _  | m'@(RelEnvM[ e' , fvmm' ]) | ≡.[ ≡.refl ] = goal
+          where rec : SetEnvCat [ FEnv-ρ×As-η αs ρ' Ss ∘SetEnv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms))
+                                        ≈ Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs ] 
+                rec = FEnv-ρ×As-commute αs f ms 
 
-            ff = RelEnvMorph.fv (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))
+                ff = RelEnvMorph.fv (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))
 
-            fvmm'' = RTM[ idnat ∘v RTMorph.d1 (fvmm' φ) , idnat ∘v RTMorph.d2 (fvmm' φ) , RTMorph.d-resp (fvmm' φ) ]
+                fvmm'' = RTM[ idnat ∘v RTMorph.d1 (fvmm' φ) , idnat ∘v RTMorph.d2 (fvmm' φ) , RTMorph.d-preserves (fvmm' φ) ]
 
-            lhs' = Functor.F₁ F fvmm'' 
+                lhs' = Functor.F₁ F fvmm'' 
 
-            RTM-≈ : (RTCat j) [ fvmm' φ ≈ fvmm'' ] 
-            RTM-≈ = ≡.refl , ≡.refl 
-                                                           
-            lhs = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v lhs' 
-            rhs = SetEnvMorph.fv (Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs) φ
+                RTM-≈ : (RTCat j) [ fvmm' φ ≈ fvmm'' ] 
+                RTM-≈ = ≡.refl , ≡.refl 
 
-            module SEC = Category SetEnvCat 
+                lhs = SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v lhs' 
+                rhs = SetEnvMorph.fv (Functor.F₁ (extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ Func^ Rels Sets G k)) (f , ms) ∘SetEnv FEnv-ρ×As-η αs ρ Rs) φ
 
-            module Setsj = Category [Sets^ j ,Sets]
-            open Setsj.HomReasoning
+                module SEC = Category SetEnvCat 
 
-            subsubgoal : [Sets^ j ,Sets] [ Functor.F₁ F fvmm'' ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
-            subsubgoal =  begin (Functor.F₁ F fvmm'')
-                                ≈⟨  Functor.F-resp-≈ F RTM-≈ ⟩
-                                Functor.F₁ F (fvmm' φ)
-                                ≈⟨ F-resp-fv φ m' ⟩
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m') φ  
-                                ≈⟨ ≡.refl ⟩ -- this line comes from proof given by inspect 
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))) φ  
-                                ≈⟨ ≡.refl ⟩
-                                SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ  ∎   
+                module Setsj = Category [Sets^ j ,Sets]
+                open Setsj.HomReasoning
 
-            subgoal : [Sets^ j ,Sets] [ lhs ≈ SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
-            subgoal {Xs} {x} =  ≡.cong (NaturalTransformation.η (SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ) Xs) subsubgoal  
+                subsubgoal : [Sets^ j ,Sets] [ Functor.F₁ F fvmm'' ≈ SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
+                subsubgoal =  begin (Functor.F₁ F fvmm'')
+                                    ≈⟨  Functor.F-resp-≈ F RTM-≈ ⟩
+                                    Functor.F₁ F (fvmm' φ)
+                                    ≈⟨ F-resp-fv φ m' ⟩
+                                    SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) m') φ  
+                                    ≈⟨ ≡.refl ⟩ -- this line comes from proof given by inspect 
+                                    SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F) (Functor.F₁ (extendRelEnv-ρ×As αs) (f , ms))) φ  
+                                    ≈⟨ ≡.refl ⟩
+                                    SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ  ∎   
 
-            goal : [Sets^ j ,Sets] [ lhs ≈ rhs ] 
-            goal = begin lhs
-                         ≈⟨ subgoal ⟩
-                         SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ
-                         ≈⟨ rec ⟩
-                         rhs ∎ 
+                subgoal : [Sets^ j ,Sets] [ lhs ≈ SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ ]
+                subgoal {Xs} {x} =  ≡.cong (NaturalTransformation.η (SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ) Xs) subsubgoal  
+
+                goal : [Sets^ j ,Sets] [ lhs ≈ rhs ] 
+                goal = begin lhs
+                            ≈⟨ subgoal ⟩
+                            SetEnvMorph.fv (FEnv-ρ×As-η αs ρ' Ss) φ ∘v  SetEnvMorph.fv (Functor.F₁ (EnvFunc-RT F ∘F extendRelEnv-ρ×As αs) (f , ms)) φ
+                            ≈⟨ rec ⟩
+                            rhs ∎ 
 
 
 
 
-    open import Categories.Morphism
-    FEnv-ρ×As-isoˡ : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k)
-                     → SetEnvCat [ 
-                        FEnv-ρ×As-η' αs ρ Rs ∘SetEnv FEnv-ρ×As-η αs ρ Rs 
-                        ≈ idSetEnv ] 
-    FEnv-ρ×As-isoˡ [] ρ [] = ≡.refl 
-    FEnv-ρ×As-isoˡ (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) {j} {φ@(p ^F j)} with eqNat z j | a ≟ p
-    ... | yes ≡.refl | yes ≡.refl = Iso.isoˡ (NI.NaturalIsomorphism.iso Const-≃ R)
-    ... | yes ≡.refl | no _ = FEnv-ρ×As-isoˡ αs ρ Rs 
-    ... | no _       | _    = FEnv-ρ×As-isoˡ αs ρ Rs   
+        open import Categories.Morphism
+        FEnv-ρ×As-isoˡ : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k)
+                        → SetEnvCat [ 
+                            FEnv-ρ×As-η' αs ρ Rs ∘SetEnv FEnv-ρ×As-η αs ρ Rs 
+                            ≈ idSetEnv ] 
+        FEnv-ρ×As-isoˡ [] ρ [] = ≡.refl 
+        FEnv-ρ×As-isoˡ (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) {j} {φ@(p ^F j)} with eqNat z j | a ≟ p
+        ... | yes ≡.refl | yes ≡.refl = Iso.isoˡ (NI.NaturalIsomorphism.iso Const-≃ R)
+        ... | yes ≡.refl | no _ = FEnv-ρ×As-isoˡ αs ρ Rs 
+        ... | no _       | _    = FEnv-ρ×As-isoˡ αs ρ Rs   
 
-    FEnv-ρ×As-isoʳ : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k)
-                     → SetEnvCat [ 
-                        FEnv-ρ×As-η αs ρ Rs ∘SetEnv FEnv-ρ×As-η' αs ρ Rs 
-                        ≈ idSetEnv ] 
-    FEnv-ρ×As-isoʳ [] ρ [] = ≡.refl 
-    FEnv-ρ×As-isoʳ (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) {j} {φ@(p ^F j)} with eqNat z j | a ≟ p
-    ... | yes ≡.refl | yes ≡.refl = Iso.isoʳ (NI.NaturalIsomorphism.iso Const-≃ R) 
-    ... | yes ≡.refl | no _ = FEnv-ρ×As-isoʳ αs ρ Rs 
-    ... | no _       | _    = FEnv-ρ×As-isoʳ αs ρ Rs   
-
-
-    FEnv-extendEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
-        → EnvFunc-RT F ∘F extendRelEnv-ρ×As αs 
-        ≃ extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ (Func^ Rels Sets G k))
-    FEnv-extendEnv-ρ×As-≃ αs =
-      niHelper (record { η = λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs  }
-                       ; η⁻¹ = λ { (ρ , Rs) → FEnv-ρ×As-η' αs ρ Rs } 
-                       ; commute = λ { {ρ , Rs} {ρ' , Ss} (f , ms) →  FEnv-ρ×As-commute αs f ms } 
-                       ; iso = λ { (ρ , Rs) → record { isoˡ = FEnv-ρ×As-isoˡ αs ρ Rs
-                                                     ; isoʳ = FEnv-ρ×As-isoʳ αs ρ Rs } } }) 
+        FEnv-ρ×As-isoʳ : ∀ {k} (αs : Vec (FVar 0) k) (ρ : RelEnv) (Rs : Vec RelObj k)
+                        → SetEnvCat [ 
+                            FEnv-ρ×As-η αs ρ Rs ∘SetEnv FEnv-ρ×As-η' αs ρ Rs 
+                            ≈ idSetEnv ] 
+        FEnv-ρ×As-isoʳ [] ρ [] = ≡.refl 
+        FEnv-ρ×As-isoʳ (α@(a ^F z) ∷ αs) ρ (R ∷ Rs) {j} {φ@(p ^F j)} with eqNat z j | a ≟ p
+        ... | yes ≡.refl | yes ≡.refl = Iso.isoʳ (NI.NaturalIsomorphism.iso Const-≃ R) 
+        ... | yes ≡.refl | no _ = FEnv-ρ×As-isoʳ αs ρ Rs 
+        ... | no _       | _    = FEnv-ρ×As-isoʳ αs ρ Rs   
 
 
-π₁RT-π₁Rels-≃ : π₁RT ∘F Rels⇒RT0 ≃ Sets→0Functors ∘F π₁Rels 
-π₁RT-π₁Rels-≃ = niHelper (record { η = λ R → idnat ; η⁻¹ = λ R → idnat ; commute = λ f → ≡.refl ; iso = λ R → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } })
+        FEnv-extendEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
+            → EnvFunc-RT F ∘F extendRelEnv-ρ×As αs 
+            ≃ extendSetEnv-ρ×As αs ∘F (EnvFunc-RT F ⁂ (Func^ Rels Sets G k))
+        FEnv-extendEnv-ρ×As-≃ αs =
+            niHelper (record { η = λ { (ρ , Rs) → FEnv-ρ×As-η αs ρ Rs  }
+                            ; η⁻¹ = λ { (ρ , Rs) → FEnv-ρ×As-η' αs ρ Rs } 
+                            ; commute = λ { {ρ , Rs} {ρ' , Ss} (f , ms) →  FEnv-ρ×As-commute αs f ms } 
+                            ; iso = λ { (ρ , Rs) → record { isoˡ = FEnv-ρ×As-isoˡ αs ρ Rs
+                                                            ; isoʳ = FEnv-ρ×As-isoʳ αs ρ Rs } } }) 
 
-π₁Env-extendSetEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
-      → π₁Env ∘F extendRelEnv-ρ×As αs 
-      ≃ extendSetEnv-ρ×As αs ∘F (π₁Env ⁂ π₁Vec k) 
-π₁Env-extendSetEnv-ρ×As-≃ αs = FEnv-extendEnv-ρ×As-≃ π₁RT π₁Rels π₁RT-π₁Rels-≃ αs 
 
 
-π₂RT-π₂Rels-≃ : π₂RT ∘F Rels⇒RT0 ≃ Sets→0Functors ∘F π₂Rels 
-π₂RT-π₂Rels-≃ =
-  niHelper (record { η = λ R → idnat ; η⁻¹ = λ R → idnat ; commute = λ f → ≡.refl ; iso = λ R → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } })
 
-π₂Env-extendSetEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
-      → π₂Env ∘F extendRelEnv-ρ×As αs 
-      ≃ extendSetEnv-ρ×As αs ∘F (π₂Env ⁂ π₂Vec k) 
-π₂Env-extendSetEnv-ρ×As-≃ αs = FEnv-extendEnv-ρ×As-≃ π₂RT π₂Rels π₂RT-π₂Rels-≃ αs 
+
+-- even after making these definitions abstract, 
+-- their application in other files is still type-checking slowly 
+abstract 
+
+    π₁RT-π₁Rels-≃ : π₁RT ∘F Rels⇒RT0 ≃ Sets→0Functors ∘F π₁Rels 
+    π₁RT-π₁Rels-≃ = niHelper (record { η = λ R → idnat ; η⁻¹ = λ R → idnat ; commute = λ f → ≡.refl ; iso = λ R → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } })
+
+
+    π₁Env-extendSetEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
+        → π₁Env ∘F extendRelEnv-ρ×As αs 
+        ≃ extendSetEnv-ρ×As αs ∘F (π₁Env ⁂ π₁Vec k) 
+    π₁Env-extendSetEnv-ρ×As-≃ αs = FEnv-extendEnv-ρ×As-≃ π₁RT π₁Rels π₁RT-π₁Rels-≃ αs 
+
+
+    π₂RT-π₂Rels-≃ : π₂RT ∘F Rels⇒RT0 ≃ Sets→0Functors ∘F π₂Rels 
+    π₂RT-π₂Rels-≃ =
+        niHelper (record { η = λ R → idnat ; η⁻¹ = λ R → idnat ; commute = λ f → ≡.refl ; iso = λ R → record { isoˡ = ≡.refl ; isoʳ = ≡.refl } })
+
+
+
+    π₂Env-extendSetEnv-ρ×As-≃ : ∀ {k : ℕ} (αs : Vec (FVar 0) k) 
+        → π₂Env ∘F extendRelEnv-ρ×As αs 
+        ≃ extendSetEnv-ρ×As αs ∘F (π₂Env ⁂ π₂Vec k) 
+    π₂Env-extendSetEnv-ρ×As-≃ αs = FEnv-extendEnv-ρ×As-≃ π₂RT π₂Rels π₂RT-π₂Rels-≃ αs 
+
+
+    -- proofs about φ extension 
+
+    -- why does this one (and same for π₂) take so long to typecheck? 
+    π₁Env-extendSetEnv2-≃ : ∀ {k : ℕ} (φ : FVar k) 
+        → π₁Env ∘F extendRelEnv2 φ
+        ≃ extendSetEnv2 φ ∘F (π₁Env ⁂ π₁RT) 
+    π₁Env-extendSetEnv2-≃ = genlem π₁RT 
+
+    π₂Env-extendSetEnv2-≃ : ∀ {k : ℕ} (φ : FVar k) 
+        → π₂Env ∘F extendRelEnv2 φ
+        ≃ extendSetEnv2 φ ∘F (π₂Env ⁂ π₂RT) 
+    π₂Env-extendSetEnv2-≃ = genlem π₂RT
+
 
 
 

@@ -22,16 +22,15 @@ open import Categories.Object.Terminal
 
 
 open import SetCats 
-open import NestedTypeSyntax using (Id ; TCCtx ; FunCtx ; TCVar ; FVar ; TypeExpr ; _,++_ ; _,,_ ; _^T_ ; _^F_ ; eqNat ; _≟_ )
+open import Syntax.NestedTypeSyntax using (Id ; TCCtx ; FunCtx ; TCVar ; FVar ; TypeExpr ; _,++_ ; _,,_ ; _^T_ ; _^F_ ; eqNat ; _≟_ )
 open import Utils
 
 
 module RTEnvironments.EnvironmentExtension {o l e o' l' e' : Level}
-  (R : Category o' l' e') 
-  (D : ℕ → Category o l e) 
-  (Dt : (k : ℕ) → Category.Obj (D k))
-  (Dtm : (k : ℕ) → {d : Category.Obj (D k)} → (D k) [ d , Dt k ])
-  (toD0 : Functor R (D 0)) 
+  {R : Category o' l' e'} 
+  {D : ℕ → Category o l e}
+  {D⊤ : (k : ℕ) → Terminal (D k)}
+  {toD0 : Functor R (D 0)}
   where 
 -- About this file: 
 -- In this file we generalize the environment extension constructions 
@@ -47,7 +46,7 @@ module RTEnvironments.EnvironmentExtension {o l e o' l' e' : Level}
 -- Dt and Dtm are used to define trivFVEnv. 
 
 
-open import RTEnvironments.Core D Dt Dtm 
+open import RTEnvironments.Core {o} {l} {e} {D} {D⊤}
 
 module R = Category R
 
@@ -59,7 +58,7 @@ module IdComm {o l e : Level} (C : Category o l e) where
     open C
     open C.HomReasoning
   
-    -- used in extendmorph2-vec-nat 
+    -- used in extendfv-morph-vec-nat 
     id-comm-1 : ∀ {X Y Z : C.Obj} → (f : X ⇒ Y) → (g : Y ⇒ Z) → (h : X ⇒ Z) → g ∘ f ≈ h → (id ∘ g) ∘ (id ∘ f) ≈ id ∘ h 
     id-comm-1 f g h gf≈h = begin (id ∘ g) ∘ id ∘ f
                                     ≈⟨ C.∘-resp-≈ C.identityˡ C.identityˡ  ⟩
@@ -133,43 +132,43 @@ extendmorph-idF {k} (φ ^F k) F ρ ρ' f = record { eqTC = EnvMorph.eqTC f ; fv 
 
 
 
-extendmorph2 : ∀ {k} (φ : FVar k)
+extendfv-morph : ∀ {k} (φ : FVar k)
                 {F G : DObj k} 
               → (ρ ρ' : Env)
               → EnvMorph ρ ρ'
               → (D k) [ F ,  G ] 
               → EnvMorph (ρ  [ φ :fv= F ])
                             (ρ' [ φ :fv= G ])
-extendmorph2 {k} φ {F} {G} ρ ρ' f η = extendmorph-η {k} {F} {G} ρ' φ η ∘Env extendmorph-idF {k} φ F ρ ρ' f 
+extendfv-morph {k} φ {F} {G} ρ ρ' f η = extendmorph-η {k} {F} {G} ρ' φ η ∘Env extendmorph-idF {k} φ F ρ ρ' f 
 
 --------------------------------
 -- Functor laws for extendEnv2
-extendmorph2-identity : ∀ {k} (φ : FVar k) (ρ : Env)
+extendfv-morph-identity : ∀ {k} (φ : FVar k) (ρ : Env)
                         → (F : Category.Obj (D k)) 
-                        → EnvCat [ (extendmorph2 φ {F} {F} ρ ρ idEnv (Category.id (D k)))
+                        → EnvCat [ (extendfv-morph φ {F} {F} ρ ρ idEnv (Category.id (D k)))
                           ≈ (Category.id EnvCat {ρ [ φ :fv= F ]}) ]
                         {-
                         → ∀ {j : ℕ} {ψ : FVar j} 
                         → ([C^ j ,C] Category.≈
                          EnvMorph.fv
-                         (extendmorph2 φ {F} {F} ρ ρ (Category.id EnvCat) (Category.id (D k)))
+                         (extendfv-morph φ {F} {F} ρ ρ (Category.id EnvCat) (Category.id (D k)))
                          ψ)
                         (EnvMorph.fv (Category.id EnvCat {ρ [ φ :fv= F ]}) ψ)
                         -}
-extendmorph2-identity (φ ^F k) ρ F {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+extendfv-morph-identity (φ ^F k) ρ F {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = Category.identityʳ  (D k)
 ... | yes ≡.refl | no _ = Category.identityʳ (D k)
 ... | no _ | _ = Category.identityʳ (D j)
 
 
 
-extendmorph2-homomorphism : ∀ {k} (φ : FVar k) {F1 F2 F3 : Category.Obj (D k)} 
+extendfv-morph-homomorphism : ∀ {k} (φ : FVar k) {F1 F2 F3 : Category.Obj (D k)} 
                               {ρ1 ρ2 ρ3 : Env}
                               → (f : EnvMorph ρ1 ρ2) (η : (D k) [ F1 ,  F2 ])
                               → (g : EnvMorph ρ2 ρ3) (δ : (D k) [ F2 ,  F3 ] )
-                              → EnvCat [ (extendmorph2 φ {F1} {F3} ρ1 ρ3 (g ∘Env f) ((D k) [ δ ∘ η ] ))
-                                ≈ (extendmorph2 φ {F2} {F3} ρ2 ρ3 g δ) ∘Env (extendmorph2 φ {F1} {F2} ρ1 ρ2 f η) ] 
-extendmorph2-homomorphism (φ ^F k) f η g δ {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+                              → EnvCat [ (extendfv-morph φ {F1} {F3} ρ1 ρ3 (g ∘Env f) ((D k) [ δ ∘ η ] ))
+                                ≈ (extendfv-morph φ {F2} {F3} ρ2 ρ3 g δ) ∘Env (extendfv-morph φ {F1} {F2} ρ1 ρ2 f η) ] 
+extendfv-morph-homomorphism (φ ^F k) f η g δ {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl =  begin (δ ∘ η) ∘ id
                                        ≈⟨ identityʳ  ⟩
                                        δ ∘ η 
@@ -197,14 +196,14 @@ extendmorph2-homomorphism (φ ^F k) f η g δ {j} {ψ ^F j} with eqNat k j | φ 
         open Category.HomReasoning (D j)
 
 
-extendmorph2-resp : ∀ {k} (φ : FVar k) {ρ ρ' : Env} 
+extendfv-morph-resp : ∀ {k} (φ : FVar k) {ρ ρ' : Env} 
                       {f g : EnvMorph ρ ρ'}
                       {F G : DObj k}
                       {η δ : (D k) [ F ,  G ] }
                       (f≈g : (EnvCat Category.≈ f) g)
                       (η≈δ : ((D k) Category.≈ η) δ) 
-                      → EnvCat [ (extendmorph2 φ {F} {G} ρ ρ' f η) ≈ (extendmorph2 φ  {F} {G} ρ ρ' g δ) ]
-extendmorph2-resp (φ ^F k) {η = η} {δ} f≈g η≈δ {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+                      → EnvCat [ (extendfv-morph φ {F} {G} ρ ρ' f η) ≈ (extendfv-morph φ  {F} {G} ρ ρ' g δ) ]
+extendfv-morph-resp (φ ^F k) {η = η} {δ} f≈g η≈δ {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = Category.∘-resp-≈ (D k) η≈δ (Category.Equiv.refl (D k))
 ... | yes ≡.refl | no _ = Category.∘-resp-≈ (D j) (Category.Equiv.refl (D j)) f≈g 
 ... | no _ | _ =  Category.∘-resp-≈ (D j) (Category.Equiv.refl (D j)) f≈g 
@@ -217,19 +216,19 @@ extendmorph2-resp (φ ^F k) {η = η} {δ} f≈g η≈δ {j} {ψ ^F j} with eqNa
 -- can we prove that 
 --  f [ φs :fvs= ηs ] [ φ :fvs= η ]
 -- ≈ f [ φs :fvs= ηs ] [ φ :fvs= η ]
-extendmorph2-vec : ∀ {k n } (φs : Vec (FVar k) n)
+extendfv-morph-vec : ∀ {k n } (φs : Vec (FVar k) n)
                 (Fs Gs : Vec (DObj k) n)
               → (ρ ρ' : Env)
               → EnvMorph ρ ρ'
               → foreach2 (Category._⇒_ (D k)) Fs Gs
               → EnvMorph (ρ  [ φs :fvs= Fs ])
                             (ρ' [ φs :fvs= Gs ])
-extendmorph2-vec {k} {zero} [] [] [] ρ ρ' f bigtt = f
-extendmorph2-vec {k} {suc n} (φ ∷ φs) (F ∷ Fs) (G ∷ Gs) ρ ρ' f (η , ηs) = 
+extendfv-morph-vec {k} {zero} [] [] [] ρ ρ' f bigtt = f
+extendfv-morph-vec {k} {suc n} (φ ∷ φs) (F ∷ Fs) (G ∷ Gs) ρ ρ' f (η , ηs) = 
       record { eqTC = EnvMorph.eqTC f 
              ; fv = EnvMorph.fv 
-                        (extendmorph2 {k} φ (ρ [ φs :fvs= Fs ]) (ρ' [ φs :fvs= Gs ]) 
-                            (extendmorph2-vec {k} {n} φs Fs Gs ρ ρ' f ηs) η) }
+                        (extendfv-morph {k} φ (ρ [ φs :fvs= Fs ]) (ρ' [ φs :fvs= Gs ]) 
+                            (extendfv-morph-vec {k} {n} φs Fs Gs ρ ρ' f ηs) η) }
 
 
 
@@ -238,18 +237,18 @@ extendmorph2-vec {k} {suc n} (φ ∷ φs) (F ∷ Fs) (G ∷ Gs) ρ ρ' f (η , �
 -- f [ φ := η ]
 -- can be decomposed into
 -- f [ φ := id_F ] ∘Env id_ρ [ φ := η ] 
-extendmorph2-nat : ∀ {k} (φ : FVar k)
+extendfv-morph-nat : ∀ {k} (φ : FVar k)
                 {F G : DObj k} 
               → (ρ ρ' : Env)
               → (f : EnvMorph ρ ρ')
               → (η : (D k) [ F ,  G ])
               → EnvCat [
-              extendmorph2 φ {F = G} {G = G} ρ ρ' f (Did k)
-              ∘Env extendmorph2 φ ρ ρ idEnv η 
+              extendfv-morph φ {F = G} {G = G} ρ ρ' f (Did k)
+              ∘Env extendfv-morph φ ρ ρ idEnv η 
               ≈
-              extendmorph2 φ ρ ρ' f η 
+              extendfv-morph φ ρ ρ' f η 
               ]
-extendmorph2-nat {k} (φ ^F k) {F} {G} ρ ρ' f η {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+extendfv-morph-nat {k} (φ ^F k) {F} {G} ρ ρ' f η {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = id-comm-id-idˡ (D k) ((D k) [ η ∘ (Did k) ])
 ... | no _ | _ = id-comm-id-idʳ (D j) ((D j) [ (Did j) ∘ fψ ])
   where fψ = EnvMorph.fv f (ψ ^F j)
@@ -262,30 +261,30 @@ extendmorph2-nat {k} (φ ^F k) {F} {G} ρ ρ' f η {j} {ψ ^F j} with eqNat k j 
 -- a kind of naturality condition
 -- f [ φs := id_Fs ] ∘Env id_ρ [ φs := ηs ]
 -- ≈ f [ φs := ηs ]
-extendmorph2-vec-nat : ∀ {k n } (φs : Vec (FVar k) n)
+extendfv-morph-vec-nat : ∀ {k n } (φs : Vec (FVar k) n)
                    → (Fs Gs : Vec (DObj k) n)
                    → (ρ ρ' : Env)
                    → (f : EnvMorph ρ ρ')
                    → (ηs : foreach2 (Category._⇒_ (D k))  Fs Gs)
                    → EnvCat [
-                     extendmorph2-vec φs Gs Gs ρ ρ' f (make-foreach2-homg {As = Gs} (Did k))
+                     extendfv-morph-vec φs Gs Gs ρ ρ' f (make-foreach2-homg {As = Gs} (Did k))
                      ∘Env
-                     extendmorph2-vec φs Fs Gs ρ ρ idEnv ηs
+                     extendfv-morph-vec φs Fs Gs ρ ρ idEnv ηs
                      ≈ 
-                     extendmorph2-vec φs Fs Gs ρ ρ' f ηs 
+                     extendfv-morph-vec φs Fs Gs ρ ρ' f ηs 
                      ]
-extendmorph2-vec-nat {k} [] [] [] ρ ρ' f bigtt {j} = Category.identityʳ (D j)
-extendmorph2-vec-nat ((φ ^F k) ∷ φs) (F ∷ Fs) (G ∷ Gs) ρ ρ' f (η , ηs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+extendfv-morph-vec-nat {k} [] [] [] ρ ρ' f bigtt {j} = Category.identityʳ (D j)
+extendfv-morph-vec-nat ((φ ^F k) ∷ φs) (F ∷ Fs) (G ∷ Gs) ρ ρ' f (η , ηs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = id-comm-id-idˡ (D k) ((D k) [ η ∘ (Did k) ])
 
-... | no _       | _    = id-comm-1 (D j) ρη fψ fη (extendmorph2-vec-nat φs Fs Gs ρ ρ' f ηs)     
-  where fψ = (EnvMorph.fv (extendmorph2-vec φs Gs Gs ρ ρ' f (make-foreach2-homg (Did k))) (ψ ^F j))
-        ρη = EnvMorph.fv (extendmorph2-vec φs Fs Gs ρ ρ idEnv ηs) (ψ ^F j)
-        fη = EnvMorph.fv (extendmorph2-vec φs Fs Gs ρ ρ' f ηs) (ψ ^F j)
-... | yes ≡.refl | no _ = id-comm-1 (D j) ρη fψ fη (extendmorph2-vec-nat φs Fs Gs ρ ρ' f ηs)     
-  where fψ = EnvMorph.fv (extendmorph2-vec φs Gs Gs ρ ρ' f (make-foreach2-homg (Did k))) (ψ ^F j)
-        ρη = EnvMorph.fv (extendmorph2-vec φs Fs Gs ρ ρ idEnv ηs) (ψ ^F j)
-        fη = EnvMorph.fv (extendmorph2-vec φs Fs Gs ρ ρ' f ηs) (ψ ^F j)
+... | no _       | _    = id-comm-1 (D j) ρη fψ fη (extendfv-morph-vec-nat φs Fs Gs ρ ρ' f ηs)     
+  where fψ = (EnvMorph.fv (extendfv-morph-vec φs Gs Gs ρ ρ' f (make-foreach2-homg (Did k))) (ψ ^F j))
+        ρη = EnvMorph.fv (extendfv-morph-vec φs Fs Gs ρ ρ idEnv ηs) (ψ ^F j)
+        fη = EnvMorph.fv (extendfv-morph-vec φs Fs Gs ρ ρ' f ηs) (ψ ^F j)
+... | yes ≡.refl | no _ = id-comm-1 (D j) ρη fψ fη (extendfv-morph-vec-nat φs Fs Gs ρ ρ' f ηs)     
+  where fψ = EnvMorph.fv (extendfv-morph-vec φs Gs Gs ρ ρ' f (make-foreach2-homg (Did k))) (ψ ^F j)
+        ρη = EnvMorph.fv (extendfv-morph-vec φs Fs Gs ρ ρ idEnv ηs) (ψ ^F j)
+        fη = EnvMorph.fv (extendfv-morph-vec φs Fs Gs ρ ρ' f ηs) (ψ ^F j)
 
 
 
@@ -315,20 +314,20 @@ toRT0Vec-map {Rs = r ∷ rs} {s ∷ ss} (g , gs) = (Functor.F₁ toD0 g) , (toRT
 -- want to send vector of Rels 
 -- to vector of RT0 
 -- specifically for 0-ary variables 
-extendmorph2-vec-nat-αs : ∀ {n} (φs : Vec (FVar 0) n)
+extendfv-morph-vec-nat-αs : ∀ {n} (φs : Vec (FVar 0) n)
                    → (Xs Ys : Vec R.Obj n)
                    → (ρ ρ' : Env)
                    → (f : EnvMorph ρ ρ')
                    → (gs : (R^ n) [ Xs  , Ys ] )
                    → EnvCat [
-                     extendmorph2-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
+                     extendfv-morph-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
                      ∘Env
-                     extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
+                     extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
                      ≈ 
-                     extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+                     extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
                      ]
-extendmorph2-vec-nat-αs [] [] [] ρ ρ' f bigtt {k} = Category.identityʳ (D k)
-extendmorph2-vec-nat-αs ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f (g , gs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+extendfv-morph-vec-nat-αs [] [] [] ρ ρ' f bigtt {k} = Category.identityʳ (D k)
+extendfv-morph-vec-nat-αs ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f (g , gs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = begin (D0Rid ∘ id) ∘ D0g ∘ id
                                       ≈⟨ D0.∘-resp-≈ (D0.∘-resp-≈ (Functor.identity toD0) (D0.Equiv.refl)) (D0.Equiv.refl)  ⟩
                                       (id ∘ id) ∘ D0g ∘ id
@@ -339,33 +338,33 @@ extendmorph2-vec-nat-αs ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f (g ,
         open Category D0
         open Category.HomReasoning D0
   
-... | no _       | _    = id-comm-1 EnvCat ρη fψ fη (extendmorph2-vec-nat-αs φs Xs Ys ρ ρ' f gs) 
-  where fψ = extendmorph2-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
-        ρη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
-        fη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
-... | yes ≡.refl | no _ = id-comm-1 EnvCat ρη fψ fη (extendmorph2-vec-nat-αs φs Xs Ys ρ ρ' f gs) 
-  where fψ = extendmorph2-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
-        ρη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
-        fη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+... | no _       | _    = id-comm-1 EnvCat ρη fψ fη (extendfv-morph-vec-nat-αs φs Xs Ys ρ ρ' f gs) 
+  where fψ = extendfv-morph-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
+        ρη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
+        fη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+... | yes ≡.refl | no _ = id-comm-1 EnvCat ρη fψ fη (extendfv-morph-vec-nat-αs φs Xs Ys ρ ρ' f gs) 
+  where fψ = extendfv-morph-vec φs (toRT0Vec Ys) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map (idVec Ys))
+        ρη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ idEnv (toRT0Vec-map gs)
+        fη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
 
 
 
 
 -- other direction commutes as well 
-extendmorph2-vec-nat-αs-sym : ∀ {n} (φs : Vec (FVar 0) n)
+extendfv-morph-vec-nat-αs-sym : ∀ {n} (φs : Vec (FVar 0) n)
                    → (Xs Ys : Vec R.Obj n)
                    → (ρ ρ' : Env)
                    → (f : EnvMorph ρ ρ')
                    → (gs : (R^ n) [ Xs ,  Ys ] )
                    → EnvCat [
-                     extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
+                     extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
                      ∘Env
-                     extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs)) 
+                     extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs)) 
                      ≈ 
-                     extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+                     extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
                      ]
-extendmorph2-vec-nat-αs-sym [] [] [] ρ ρ' f bigtt {k} = Category.identityˡ (D k) 
-extendmorph2-vec-nat-αs-sym ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f (g , gs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
+extendfv-morph-vec-nat-αs-sym [] [] [] ρ ρ' f bigtt {k} = Category.identityˡ (D k) 
+extendfv-morph-vec-nat-αs-sym ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f (g , gs) {j} {ψ ^F j} with eqNat k j | φ ≟ ψ 
 ... | yes ≡.refl | yes ≡.refl = begin (D0g ∘ id) ∘ D0Rid ∘ id
                                       ≈⟨  D0.∘-resp-≈ (D0.Equiv.refl) (D0.∘-resp-≈ (Functor.identity toD0) D0.Equiv.refl)  ⟩
                                       (D0g ∘ id) ∘ id ∘ id
@@ -376,95 +375,95 @@ extendmorph2-vec-nat-αs-sym ((φ ^F k) ∷ φs) (X ∷ Xs) (Y ∷ Ys) ρ ρ' f 
         open Category D0
         open Category.HomReasoning D0
   
-... | no _       | _    = id-comm-1 EnvCat fψ ρ'η fη (extendmorph2-vec-nat-αs-sym φs Xs Ys ρ ρ' f gs) 
-  where fψ = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs))
-        ρ'η = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
-        fη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
-... | yes ≡.refl | no _ = id-comm-1 EnvCat fψ ρ'η fη ( (extendmorph2-vec-nat-αs-sym φs Xs Ys ρ ρ' f gs)) 
-  where fψ = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs))
-        ρ'η = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
-        fη = extendmorph2-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+... | no _       | _    = id-comm-1 EnvCat fψ ρ'η fη (extendfv-morph-vec-nat-αs-sym φs Xs Ys ρ ρ' f gs) 
+  where fψ = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs))
+        ρ'η = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
+        fη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
+... | yes ≡.refl | no _ = id-comm-1 EnvCat fψ ρ'η fη ( (extendfv-morph-vec-nat-αs-sym φs Xs Ys ρ ρ' f gs)) 
+  where fψ = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Xs) ρ ρ' f (toRT0Vec-map (idVec Xs))
+        ρ'η = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ' ρ' idEnv (toRT0Vec-map gs)
+        fη = extendfv-morph-vec φs (toRT0Vec Xs) (toRT0Vec Ys) ρ ρ' f (toRT0Vec-map gs)
 
 
 
 
 
 
-extendmorph2-vec-identity : ∀ {k} (αs : Vec (FVar 0) k) (ρ : Env)
+extendfv-morph-vec-identity : ∀ {k} (αs : Vec (FVar 0) k) (ρ : Env)
                               (As : Vec R.Obj k)
                               → EnvCat [ 
-                                  extendmorph2-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ (Category.id EnvCat) (toRT0Vec-map (Category.id (C^ k)))
+                                  extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ (Category.id EnvCat) (toRT0Vec-map (Category.id (C^ k)))
                                 ≈ Category.id EnvCat {ρ [ αs :fvs= toRT0Vec As ]} ] 
-extendmorph2-vec-identity {.0} [] ρ [] {k} = Category.Equiv.refl (D k) 
--- extendmorph2-vec-identity {.0} {[]} ρ [] {j} {φ} {Xs} {x} = ≡.refl
-extendmorph2-vec-identity {suc k} (α ∷ αs) ρ (A ∷ As) = 
+extendfv-morph-vec-identity {.0} [] ρ [] {k} = Category.Equiv.refl (D k) 
+-- extendfv-morph-vec-identity {.0} {[]} ρ [] {j} {φ} {Xs} {x} = ≡.refl
+extendfv-morph-vec-identity {suc k} (α ∷ αs) ρ (A ∷ As) = 
   let id0 = Category.id D0
       idAs = Category.id (R^ k)
       ρAs = ρ [ αs :fvs= toRT0Vec As ]
       -- 
       e2id : EnvCat [
-            extendmorph2 α ρAs ρAs idEnv id0
+            extendfv-morph α ρAs ρAs idEnv id0
             ≈ Category.id EnvCat ]
-      e2id = extendmorph2-identity (α ) ρAs (toRT0 A )
+      e2id = extendfv-morph-identity (α ) ρAs (toRT0 A )
       -- 
       e2vec-id : EnvCat [
-            extendmorph2-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ idEnv (toRT0Vec-map idAs)
+            extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ idEnv (toRT0Vec-map idAs)
             ≈ Category.id EnvCat ]
-      e2vec-id = extendmorph2-vec-identity αs ρ As 
+      e2vec-id = extendfv-morph-vec-identity αs ρ As 
 
     in GEnvHR.begin
-      extendmorph2 {0} α ρAs ρAs (extendmorph2-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ (idEnv {ρ}) (toRT0Vec-map (idVec As))) (toRT0-map R.id)
-    GEnvHR.≈⟨ extendmorph2-resp α e2vec-id (Functor.identity toD0) ⟩ 
-    extendmorph2 α ρAs ρAs (idEnv {ρAs}) (id0 {toRT0 A})
+      extendfv-morph {0} α ρAs ρAs (extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec As) ρ ρ (idEnv {ρ}) (toRT0Vec-map (idVec As))) (toRT0-map R.id)
+    GEnvHR.≈⟨ extendfv-morph-resp α e2vec-id (Functor.identity toD0) ⟩ 
+    extendfv-morph α ρAs ρAs (idEnv {ρAs}) (id0 {toRT0 A})
     GEnvHR.≈⟨ e2id ⟩ 
       idEnv 
     GEnvHR.∎
     where module GEnvHR = Category.HomReasoning EnvCat 
 
-extendmorph2-vec-resp : ∀ {k} (αs : Vec (FVar 0) k) (ρ ρ' : Env)
+extendfv-morph-vec-resp : ∀ {k} (αs : Vec (FVar 0) k) (ρ ρ' : Env)
                           (f g : EnvMorph ρ ρ')
                           (As Bs : Vec R.Obj k)
                           (hs is : (C^ k) [ As ,  Bs ] )
                           (f≈g : (EnvCat Category.≈ f) g)
                           (hs≈is : (C^ k) [ hs ≈ is ] ) 
                           → EnvCat [
-                            extendmorph2-vec {0} {k} αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' f (toRT0Vec-map hs)
-                            ≈ extendmorph2-vec {0} {k} αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' g (toRT0Vec-map is)
+                            extendfv-morph-vec {0} {k} αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' f (toRT0Vec-map hs)
+                            ≈ extendfv-morph-vec {0} {k} αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' g (toRT0Vec-map is)
                           ] 
                           
-extendmorph2-vec-resp {0} [] ρ ρ' f g [] [] bigtt bigtt f≈g bigtt {j} = f≈g 
-extendmorph2-vec-resp {suc k} (α ∷ αs) ρ ρ' f g (A ∷ As) (B ∷ Bs) (h , hs) (i , is) f≈g (h≈i , hs≈is) = 
+extendfv-morph-vec-resp {0} [] ρ ρ' f g [] [] bigtt bigtt f≈g bigtt {j} = f≈g 
+extendfv-morph-vec-resp {suc k} (α ∷ αs) ρ ρ' f g (A ∷ As) (B ∷ Bs) (h , hs) (i , is) f≈g (h≈i , hs≈is) = 
   let ρAs = ρ [ αs :fvs= toRT0Vec As ]
       ρ'Bs = ρ' [ αs :fvs= toRT0Vec Bs ]
       As0 = toRT0Vec As
       Bs0 = toRT0Vec Bs
       -- 
       e2-vec-f-hs≈e2-vec-g-is  : EnvCat [
-              extendmorph2-vec αs As0 Bs0 ρ ρ' f (toRT0Vec-map hs)
-              ≈ extendmorph2-vec αs As0 Bs0 ρ ρ' g (toRT0Vec-map is) ]
-      e2-vec-f-hs≈e2-vec-g-is = extendmorph2-vec-resp αs ρ ρ' f g As Bs hs is f≈g hs≈is
+              extendfv-morph-vec αs As0 Bs0 ρ ρ' f (toRT0Vec-map hs)
+              ≈ extendfv-morph-vec αs As0 Bs0 ρ ρ' g (toRT0Vec-map is) ]
+      e2-vec-f-hs≈e2-vec-g-is = extendfv-morph-vec-resp αs ρ ρ' f g As Bs hs is f≈g hs≈is
       --
     in GEnvHR.begin
-      extendmorph2 α ρAs ρ'Bs (extendmorph2-vec αs As0 Bs0 ρ ρ' f (toRT0Vec-map hs)) (toRT0-map h)
-    GEnvHR.≈⟨ extendmorph2-resp α e2-vec-f-hs≈e2-vec-g-is (Functor.F-resp-≈ toD0 h≈i ) ⟩ 
-      extendmorph2 α ρAs ρ'Bs (extendmorph2-vec αs As0 Bs0 ρ ρ' g (toRT0Vec-map is)) (toRT0-map i)
+      extendfv-morph α ρAs ρ'Bs (extendfv-morph-vec αs As0 Bs0 ρ ρ' f (toRT0Vec-map hs)) (toRT0-map h)
+    GEnvHR.≈⟨ extendfv-morph-resp α e2-vec-f-hs≈e2-vec-g-is (Functor.F-resp-≈ toD0 h≈i ) ⟩ 
+      extendfv-morph α ρAs ρ'Bs (extendfv-morph-vec αs As0 Bs0 ρ ρ' g (toRT0Vec-map is)) (toRT0-map i)
     GEnvHR.∎ 
     where module GEnvHR = Category.HomReasoning EnvCat 
 
-extendmorph2-vec-homomorphism : ∀ {k} (αs : Vec (FVar 0) k) (ρ1 ρ2 ρ3 : Env)
+extendfv-morph-vec-homomorphism : ∀ {k} (αs : Vec (FVar 0) k) (ρ1 ρ2 ρ3 : Env)
                                   (f : EnvMorph ρ1 ρ2) (g : EnvMorph ρ2 ρ3) 
                                   (As Bs Cs : Vec R.Obj k)
                                   (hs : (C^ k) [ As ,  Bs ] )
                                   (is : (C^ k) [ Bs ,  Cs ] )
                                   → EnvCat [ 
-                                  extendmorph2-vec αs (toRT0Vec As) (toRT0Vec Cs) ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs))
+                                  extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec Cs) ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs))
                                   ≈ 
-                                  extendmorph2-vec αs (toRT0Vec Bs) (toRT0Vec Cs) ρ2 ρ3 g (toRT0Vec-map is)
+                                  extendfv-morph-vec αs (toRT0Vec Bs) (toRT0Vec Cs) ρ2 ρ3 g (toRT0Vec-map is)
                                   ∘Env
-                                  extendmorph2-vec αs (toRT0Vec As) (toRT0Vec Bs) ρ1 ρ2 f (toRT0Vec-map hs)
+                                  extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec Bs) ρ1 ρ2 f (toRT0Vec-map hs)
                                   ]
-extendmorph2-vec-homomorphism [] ρ1 ρ2 ρ3 f g [] [] [] bigtt bigtt {k} = Category.Equiv.refl (D k)
-extendmorph2-vec-homomorphism (α ∷ αs) ρ1 ρ2 ρ3 f g (A ∷ As) (B ∷ Bs) (C ∷ Cs) (h , hs) (i , is) = 
+extendfv-morph-vec-homomorphism [] ρ1 ρ2 ρ3 f g [] [] [] bigtt bigtt {k} = Category.Equiv.refl (D k)
+extendfv-morph-vec-homomorphism (α ∷ αs) ρ1 ρ2 ρ3 f g (A ∷ As) (B ∷ Bs) (C ∷ Cs) (h , hs) (i , is) = 
   let As0 = toRT0Vec As
       Bs0 = toRT0Vec Bs
       Cs0 = toRT0Vec Cs
@@ -473,25 +472,25 @@ extendmorph2-vec-homomorphism (α ∷ αs) ρ1 ρ2 ρ3 f g (A ∷ As) (B ∷ Bs)
       ρ3Cs = ρ3 [ αs :fvs= Cs0 ]
       -- 
       e2-vec-hom : EnvCat [
-          extendmorph2-vec αs As0 Cs0 ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs))
-          ≈ extendmorph2-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)
-            ∘Env extendmorph2-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs) ]
-      e2-vec-hom = extendmorph2-vec-homomorphism αs ρ1 ρ2 ρ3 f g As Bs Cs hs is 
+          extendfv-morph-vec αs As0 Cs0 ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs))
+          ≈ extendfv-morph-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)
+            ∘Env extendfv-morph-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs) ]
+      e2-vec-hom = extendfv-morph-vec-homomorphism αs ρ1 ρ2 ρ3 f g As Bs Cs hs is 
       -- 
   in GEnvHR.begin
-      extendmorph2 α ρ1As ρ3Cs  
-        (extendmorph2-vec αs As0 Cs0 ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs)))
+      extendfv-morph α ρ1As ρ3Cs  
+        (extendfv-morph-vec αs As0 Cs0 ρ1 ρ3 (g ∘Env f) (toRT0Vec-map (is ∘Vec hs)))
         (toRT0-map (R [ i ∘ h ] ))
-    GEnvHR.≈⟨ extendmorph2-resp α e2-vec-hom (Functor.homomorphism toD0 ) ⟩ 
-      extendmorph2 α ρ1As ρ3Cs  
-        (extendmorph2-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)
-            ∘Env extendmorph2-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs))
+    GEnvHR.≈⟨ extendfv-morph-resp α e2-vec-hom (Functor.homomorphism toD0 ) ⟩ 
+      extendfv-morph α ρ1As ρ3Cs  
+        (extendfv-morph-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)
+            ∘Env extendfv-morph-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs))
         (D0 [ toRT0-map i ∘ toRT0-map h ] )
-    GEnvHR.≈⟨ extendmorph2-homomorphism α (extendmorph2-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs)) (toRT0-map h) 
-                                   (extendmorph2-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)) (toRT0-map i) ⟩ 
-      (extendmorph2 α ρ2Bs ρ3Cs (extendmorph2-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)) (toRT0-map i))
+    GEnvHR.≈⟨ extendfv-morph-homomorphism α (extendfv-morph-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs)) (toRT0-map h) 
+                                   (extendfv-morph-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)) (toRT0-map i) ⟩ 
+      (extendfv-morph α ρ2Bs ρ3Cs (extendfv-morph-vec αs Bs0 Cs0 ρ2 ρ3 g (toRT0Vec-map is)) (toRT0-map i))
       ∘Env 
-      (extendmorph2 α ρ1As ρ2Bs (extendmorph2-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs)) (toRT0-map h))
+      (extendfv-morph α ρ1As ρ2Bs (extendfv-morph-vec αs As0 Bs0 ρ1 ρ2 f (toRT0Vec-map hs)) (toRT0-map h))
     GEnvHR.∎ 
     where module GEnvHR = Category.HomReasoning EnvCat 
 
@@ -506,10 +505,10 @@ extendEnv2 : ∀ {k} → (φ : FVar k)
               → Functor (Product EnvCat (D k)) EnvCat
 extendEnv2 φ = record
   { F₀ = λ { (ρ , F) → ρ [ φ :fv= F ] } 
-  ; F₁ = λ { {ρ , F} {ρ' , G} (f , η) → extendmorph2 φ  {F} {G} ρ ρ' f η }
-  ; identity = λ { {ρ , F} → extendmorph2-identity φ ρ F }
-  ; homomorphism = λ { {ρ1 , F1} {ρ2 , F2} {ρ3 , F3} {f , η} {g , δ} {Xs} → extendmorph2-homomorphism φ f η g δ } 
-  ; F-resp-≈ = λ { (f≈g , η≈δ) {j} {ψ} → extendmorph2-resp φ f≈g η≈δ }
+  ; F₁ = λ { {ρ , F} {ρ' , G} (f , η) → extendfv-morph φ  {F} {G} ρ ρ' f η }
+  ; identity = λ { {ρ , F} → extendfv-morph-identity φ ρ F }
+  ; homomorphism = λ { {ρ1 , F1} {ρ2 , F2} {ρ3 , F3} {f , η} {g , δ} {Xs} → extendfv-morph-homomorphism φ f η g δ } 
+  ; F-resp-≈ = λ { (f≈g , η≈δ) {j} {ψ} → extendfv-morph-resp φ f≈g η≈δ }
   }
 
 
@@ -530,10 +529,10 @@ extendEnv-ρ×As : ∀ {k} → (αs : Vec (FVar 0) k)
                 → Functor (Product EnvCat (R^ k)) EnvCat
 extendEnv-ρ×As αs = record
   { F₀ = λ { (ρ , As) → ρ [ αs :fvs= toRT0Vec As ] } 
-  ; F₁ = λ { {ρ , As} {ρ' , Bs} (f , gs) → extendmorph2-vec αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' f (toRT0Vec-map gs) }
-  ; identity = λ { {ρ , As} {j} {φ} → extendmorph2-vec-identity αs ρ As {j} {φ} }
-  ; homomorphism = λ { {ρ1 , As} {ρ2 , Bs} {ρ3 , Cs} {f , hs} {g , is} → extendmorph2-vec-homomorphism αs ρ1 ρ2 ρ3 f g As Bs Cs hs is }
-  ; F-resp-≈ = λ { {ρ , As} {ρ' , Bs} {f , hs} {g , ks} (f≈g , hs≈ks) → extendmorph2-vec-resp αs ρ ρ' f g As Bs hs ks f≈g hs≈ks }
+  ; F₁ = λ { {ρ , As} {ρ' , Bs} (f , gs) → extendfv-morph-vec αs (toRT0Vec As) (toRT0Vec Bs) ρ ρ' f (toRT0Vec-map gs) }
+  ; identity = λ { {ρ , As} {j} {φ} → extendfv-morph-vec-identity αs ρ As {j} {φ} }
+  ; homomorphism = λ { {ρ1 , As} {ρ2 , Bs} {ρ3 , Cs} {f , hs} {g , is} → extendfv-morph-vec-homomorphism αs ρ1 ρ2 ρ3 f g As Bs Cs hs is }
+  ; F-resp-≈ = λ { {ρ , As} {ρ' , Bs} {f , hs} {g , ks} (f≈g , hs≈ks) → extendfv-morph-vec-resp αs ρ ρ' f g As Bs hs ks f≈g hs≈ks }
   } 
 
 
@@ -584,15 +583,34 @@ extendEnv-αs-curry : ∀ {k} → (αs : Vec (FVar 0) k)
                 → Functor EnvCat (Functors (R^ k) EnvCat)
 extendEnv-αs-curry αs = curry.F₀ (extendEnv-ρ×As αs)
 
-
 -- need this to define semantics of natural transformations 
 extendEnv-αs : ∀ {k} → (αs : Vec (FVar 0) k) → Env
                 → Functor (R^ k) EnvCat
 extendEnv-αs αs ρ = Functor.F₀ (curry.F₀ (extendEnv-ρ×As αs)) ρ 
 
-
-
-
 extendTEnv2 : ∀ {k} → (φ : FVar k) → (αs : Vec (FVar 0) k) 
             → Functor (Product (Product EnvCat (D k)) (R^ k)) EnvCat
-extendTEnv2 φ αs = (extendEnv-ρ×As αs) ∘F ((extendEnv2 φ ∘F πˡ) ※ πʳ)
+-- extendTEnv2 φ αs = (extendEnv-ρ×As αs) ∘F ((extendEnv2 φ ∘F πˡ) ※ πʳ)
+
+-- could also define extendTEnv2 as 
+extendTEnv2 φ αs = (extendEnv-ρ×As αs) ∘F (extendEnv2 φ ⁂ idF)
+
+
+
+
+-- extendEnv-ρ×As : ∀ {k} → (αs : Vec (FVar 0) k) 
+--                 → Functor (Product EnvCat (R^ k)) EnvCat
+{-
+
+WTS
+
+π₁Env ∘F extendTEnv2
+=
+π₁Env ∘F ((extendEnv-ρ×As αs) ∘F ((extendEnv2 φ ∘F πˡ) ※ πʳ))
+
+=
+?? 
+
+-}
+
+

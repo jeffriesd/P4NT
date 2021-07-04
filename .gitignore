@@ -7,3 +7,6 @@ GADTs/**
 agda-notes
 latex/**
 **.lagda.*
+*.agda~
+*.sty
+*.tex
